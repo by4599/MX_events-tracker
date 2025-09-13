@@ -193,8 +193,16 @@
 
     relationSel.addEventListener('change', () => {
       const v = relationSel.value;
-      relationChildren.classList.toggle('hidden', v !== '자녀');
-      relationEtcWrap.classList.toggle('hidden', v !== '기타');
+      if (v === '자녀') {
+        relationChildren.classList.remove('hidden');
+        relationEtcWrap.classList.add('hidden');
+      } else if (v === '기타') {
+        relationEtcWrap.classList.remove('hidden');
+        relationChildren.classList.add('hidden');
+      } else {
+        relationChildren.classList.add('hidden');
+        relationEtcWrap.classList.add('hidden');
+      }
     });
 
     childOrder.addEventListener('change', () => {
@@ -221,7 +229,7 @@
       e.target.value = v;
     });
 
-    // ====== 카카오 주소 검색 개선 ======
+    // ====== 카카오 주소 검색 ======
     document.getElementById('btnAddr').addEventListener('click', () => openPostcode());
     function openPostcode() {
       const query = document.getElementById('venueAddr').value || '';
@@ -236,7 +244,7 @@
     }
 
     // ====== 제출 ======
-    const ENDPOINT = https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec'<<여기에 Apps Script 웹앱 URL /exec>>';
+    const ENDPOINT = 'https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec';
 
     document.getElementById('form').addEventListener('submit', async (e) => {
       e.preventDefault();
