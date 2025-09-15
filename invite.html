@@ -24,14 +24,33 @@ input,select{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;box
 <div class="card">
   <h2>추가 정보 입력</h2>
 
-  <!-- 기본정보 (inviteExtract에서 채워짐 + 수정 가능) -->
+  <!-- 기본정보 -->
   <div class="section">
-    <label>신랑측 *</label>
-    <input id="groomInfo" />
+    <h3>신랑측</h3>
+    <label>아버지 *</label>
+    <input id="groomFather" />
+    <label>어머니 *</label>
+    <input id="groomMother" />
+    <label>자녀 이름 *</label>
+    <input id="groomName" placeholder="예: 현종" />
+    <label>자녀 순서 *</label>
+    <select id="groomOrder">
+      <option value="">선택</option><option>장남</option><option>차남</option><option>삼남</option><option>아들</option>
+    </select>
 
-    <label>신부측 *</label>
-    <input id="brideInfo" />
+    <h3>신부측</h3>
+    <label>아버지 *</label>
+    <input id="brideFather" />
+    <label>어머니 *</label>
+    <input id="brideMother" />
+    <label>자녀 이름 *</label>
+    <input id="brideName" placeholder="예: 승아" />
+    <label>자녀 순서 *</label>
+    <select id="brideOrder">
+      <option value="">선택</option><option>장녀</option><option>차녀</option><option>삼녀</option><option>딸</option>
+    </select>
 
+    <h3>예식</h3>
     <label>예식일시 *</label>
     <div class="row">
       <input type="date" id="eventDate" />
@@ -40,43 +59,30 @@ input,select{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;box
 
     <label>예식장 *</label>
     <input id="venue" />
-
     <label>예식장 주소 *</label>
     <input id="venueAddr" />
-
     <label>스몰웨딩 여부 *</label>
     <select id="isSmallWedding">
       <option value="">선택</option><option>예</option><option>아니오</option>
     </select>
   </div>
 
-  <!-- 추가 정보 입력 -->
+  <!-- 추가 정보 -->
   <div class="section">
     <label>임원 성함 *</label>
-    <input id="name" required />
-
+    <input id="name" />
     <label>재직/퇴직 *</label>
-    <select id="empStatus" required>
-      <option value="">선택</option><option>재직</option><option>퇴직</option>
-    </select>
-
+    <select id="empStatus"><option value="">선택</option><option>재직</option><option>퇴직</option></select>
     <label>근무 부서 *</label>
-    <input id="deptWhenEmployed" placeholder="○○개발3그룹(무선)" />
-
+    <input id="deptWhenEmployed" />
     <label>현 직장/직책 *</label>
     <input id="currentJobTitle" />
-
     <label>청탁금지법 대상 여부 *</label>
-    <select id="antiGraft">
-      <option value="">선택</option><option>대상</option><option>비대상</option>
-    </select>
+    <select id="antiGraft"><option value="">선택</option><option>대상</option><option>비대상</option></select>
 
-    <!-- 배우자 정보 추가 (청탁금지법 → 대상 → 배우자 선택 시 보이게) -->
     <div id="spouseWrap" class="hidden">
       <label>대상자 확인 *</label>
-      <select id="targetWho">
-        <option value="">선택</option><option>본인</option><option>배우자</option>
-      </select>
+      <select id="targetWho"><option value="">선택</option><option>본인</option><option>배우자</option></select>
       <div id="spouseJobWrap" class="hidden">
         <label>배우자 현 직장/직책 *</label>
         <input id="spouseJobTitle" />
@@ -85,26 +91,18 @@ input,select{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;box
 
     <label>축의계좌 *</label>
     <input id="bankNumber" placeholder="000-0000-0000-00" />
-
     <label>은행 *</label>
     <select id="bankName">
-      <option value="">선택</option>
-      <option>국민</option><option>신한</option><option>우리</option>
-      <option>하나</option><option>농협</option><option>기업</option>
-      <option value="기타">기타</option>
+      <option value="">선택</option><option>국민</option><option>신한</option><option>우리</option><option>하나</option><option>농협</option><option>기업</option><option value="기타">기타</option>
     </select>
     <div id="bankEtcWrap" class="hidden">
       <label>은행 (기타)</label>
       <input id="bankNameEtc" />
     </div>
-
     <label>연락처 *</label>
     <input id="phone" placeholder="010-1234-5678" />
-
     <label>퇴임임원 문자 알림 계좌번호 공개 여부 *</label>
-    <select id="accountDisclosure">
-      <option value="">선택</option><option>희망</option><option>비희망</option>
-    </select>
+    <select id="accountDisclosure"><option value="">선택</option><option>희망</option><option>비희망</option></select>
   </div>
 
   <!-- 미리보기 + 제출 -->
@@ -116,43 +114,29 @@ input,select{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;box
 </div>
 
 <script>
-// ====== 초기에 inviteExtract 값 반영 ======
-window.addEventListener('DOMContentLoaded',()=>{
-  const saved=localStorage.getItem('inviteExtract');
-  if(saved){
-    try{
-      const d=JSON.parse(saved);
-      if(d.groomInfo) document.getElementById('groomInfo').value=d.groomInfo;
-      if(d.brideInfo) document.getElementById('brideInfo').value=d.brideInfo;
-      if(d.eventDate) document.getElementById('eventDate').value=d.eventDate;
-      if(d.eventTime) document.getElementById('eventTime').value=d.eventTime;
-      if(d.venue) document.getElementById('venue').value=d.venue;
-      if(d.venueAddr) document.getElementById('venueAddr').value=d.venueAddr;
-      if(d.isSmallWedding) document.getElementById('isSmallWedding').value=d.isSmallWedding;
-    }catch(e){ console.error("inviteExtract parse error",e); }
-  }
-});
-
 // ====== 청탁금지법 로직 ======
 document.getElementById('antiGraft').addEventListener('change',()=>{
-  const v=document.getElementById('antiGraft').value;
-  document.getElementById('spouseWrap').classList.toggle('hidden',v!=="대상");
+  document.getElementById('spouseWrap').classList.toggle('hidden',document.getElementById('antiGraft').value!=="대상");
 });
 document.getElementById('targetWho').addEventListener('change',()=>{
-  const v=document.getElementById('targetWho').value;
-  document.getElementById('spouseJobWrap').classList.toggle('hidden',v!=="배우자");
+  document.getElementById('spouseJobWrap').classList.toggle('hidden',document.getElementById('targetWho').value!=="배우자");
 });
 
 // ====== 은행 기타 ======
 document.getElementById('bankName').addEventListener('change',()=>{
-  const v=document.getElementById('bankName').value;
-  document.getElementById('bankEtcWrap').classList.toggle('hidden',v!=="기타");
+  document.getElementById('bankEtcWrap').classList.toggle('hidden',document.getElementById('bankName').value!=="기타");
 });
 
 // ====== 미리보기 ======
 document.getElementById('btnPreview').addEventListener('click',()=>{
-  const groom=document.getElementById('groomInfo').value;
-  const bride=document.getElementById('brideInfo').value;
+  const groomF=document.getElementById('groomFather').value;
+  const groomM=document.getElementById('groomMother').value;
+  const groomN=document.getElementById('groomName').value;
+  const groomO=document.getElementById('groomOrder').value;
+  const brideF=document.getElementById('brideFather').value;
+  const brideM=document.getElementById('brideMother').value;
+  const brideN=document.getElementById('brideName').value;
+  const brideO=document.getElementById('brideOrder').value;
   const date=document.getElementById('eventDate').value;
   const time=document.getElementById('eventTime').value;
   const venue=document.getElementById('venue').value;
@@ -160,13 +144,11 @@ document.getElementById('btnPreview').addEventListener('click',()=>{
   const name=document.getElementById('name').value;
   const job=document.getElementById('currentJobTitle').value;
   const phone=document.getElementById('phone').value;
-  const bank=document.getElementById('bankName').value==="기타"
-    ? document.getElementById('bankNameEtc').value
-    : document.getElementById('bankName').value;
+  const bank=document.getElementById('bankName').value==="기타"?document.getElementById('bankNameEtc').value:document.getElementById('bankName').value;
   const bankNum=document.getElementById('bankNumber').value;
 
-  const preview=`${groom}
-${bride}
+  const preview=`${groomF} ∙ ${groomM} 의 ${groomO} ${groomN}
+${brideF} ∙ ${brideM} 의 ${brideO} ${brideN}
 □ 일 시 : ${date} ${time}
 □ 장 소 : ${venue}
            (${addr})
@@ -181,8 +163,14 @@ ${bride}
 const ENDPOINT="https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec";
 document.getElementById('btnSubmit').addEventListener('click',async()=>{
   const payload={
-    groomInfo:document.getElementById('groomInfo').value,
-    brideInfo:document.getElementById('brideInfo').value,
+    groomFather:document.getElementById('groomFather').value,
+    groomMother:document.getElementById('groomMother').value,
+    groomName:document.getElementById('groomName').value,
+    groomOrder:document.getElementById('groomOrder').value,
+    brideFather:document.getElementById('brideFather').value,
+    brideMother:document.getElementById('brideMother').value,
+    brideName:document.getElementById('brideName').value,
+    brideOrder:document.getElementById('brideOrder').value,
     eventDate:document.getElementById('eventDate').value,
     eventTime:document.getElementById('eventTime').value,
     venue:document.getElementById('venue').value,
@@ -196,9 +184,7 @@ document.getElementById('btnSubmit').addEventListener('click',async()=>{
     targetWho:document.getElementById('targetWho').value,
     spouseJobTitle:document.getElementById('spouseJobTitle').value,
     bankNumber:document.getElementById('bankNumber').value,
-    bankName:document.getElementById('bankName').value==="기타"
-      ? document.getElementById('bankNameEtc').value
-      : document.getElementById('bankName').value,
+    bankName:document.getElementById('bankName').value==="기타"?document.getElementById('bankNameEtc').value:document.getElementById('bankName').value,
     phone:document.getElementById('phone').value,
     accountDisclosure:document.getElementById('accountDisclosure').value
   };
@@ -206,11 +192,8 @@ document.getElementById('btnSubmit').addEventListener('click',async()=>{
   try{
     const res=await fetch(ENDPOINT,{method:"POST",body:JSON.stringify(payload)});
     const data=await res.json();
-    if(data.ok){
-      alert("제출 완료! 담당자에게 전달되었습니다.");
-    }else{
-      alert("오류: "+data.error);
-    }
+    if(data.ok){ alert("제출 완료! 담당자에게 전달되었습니다."); }
+    else{ alert("오류: "+data.error); }
   }catch(err){ alert("네트워크 오류: "+err.message); }
 });
 </script>
