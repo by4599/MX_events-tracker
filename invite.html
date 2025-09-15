@@ -72,4 +72,57 @@ document.getElementById('btnExtract').addEventListener('click', async ()=>{
       data = JSON.parse(text);
     } catch (e) {
       console.error('서버 응답 원문:', text.slice(0,400));
-      msg
+      msg.textContent = '서버가 JSON 대신 HTML을 반환했습니다. 웹앱 URL(/exec)·권한을 확인하세요.';
+      msg.className = 'error';
+      return;
+    }
+
+    if (!data.ok) {
+      msg.textContent = '추출 실패: ' + (data.error || '원인 미상');
+      msg.className = 'error';
+      return;
+    }
+
+    // JSON 요약 표시
+    const summary = {
+      groomFather: data.groomFather || '',
+      groomMother: data.groomMother || '',
+      groomName:   data.groomName   || '',
+      brideFather: data.brideFather || '',
+      brideMother: data.brideMother || '',
+      brideName:   data.brideName   || '',
+      order:       data.order       || '',
+      eventDate:   data.eventDate   || '',
+      eventTime:   data.eventTime   || '',
+      venue:       data.venue       || '',
+      venueAddr:   data.venueAddr   || ''
+    };
+    pre.textContent = JSON.stringify(summary, null, 2);
+
+    // 안내문 형식 표시
+    if (data.boardText) {
+      board.textContent = data.boardText;
+    } else {
+      board.textContent = '(안내문 형식 추출 실패)';
+    }
+
+    result.style.display = 'block';
+    msg.textContent = '정보가 채워졌습니다.';
+    msg.className = 'success';
+
+    // 다음 단계에 넘기기 (세부 입력 페이지용)
+    localStorage.setItem('inviteExtract', JSON.stringify(summary));
+    localStorage.setItem('inviteUrl', url);
+
+  } catch (err) {
+    msg.textContent = '네트워크 오류: ' + err.message;
+    msg.className = 'error';
+  }
+});
+
+document.getElementById('goDetail').addEventListener('click', ()=>{
+  location.href = 'wedding.html';
+});
+</script>
+</body>
+</html>
