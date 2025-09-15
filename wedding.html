@@ -14,7 +14,7 @@
     label { display:block; margin:12px 0 4px; font-weight:600; }
     input, select, textarea {
       width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; font:inherit;
-      box-sizing:border-box; /* select와 input 폭 동일 */
+      box-sizing:border-box;
     }
     textarea { min-height: 80px; }
     .row { display:flex; gap:8px; }
@@ -24,15 +24,12 @@
     .success { color:var(--ok); margin-top:12px; }
     .error { color:var(--err); margin-top:12px; }
     .hidden { display:none; }
-    /* 개인정보 동의 체크박스 정렬 + 1줄 고정 */
-    .consent-line {
-      display:flex; align-items:center; gap:8px; margin-top:8px;
-      white-space: nowrap;
-    }
+    .consent-line { display:flex; align-items:center; gap:8px; margin-top:8px; white-space:nowrap; }
     .consent-line input[type="checkbox"] { margin:0; }
+    /* 게시판 미리보기 박스 */
+    #previewBox { margin-top:20px; }
+    #previewText { white-space:pre-wrap; border:1px solid #ccc; padding:12px; border-radius:8px; background:#f9f9f9; }
   </style>
-  <!-- 카카오 주소검색 API -->
-  <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 </head>
 <body>
   <div class="card">
@@ -64,7 +61,6 @@
       <label>근무 부서 *<span class="hint">(재직 시)</span></label>
       <input name="deptWhenEmployed" required placeholder="○○개발3그룹(무선)" />
 
-      <!-- 직책 / 청탁금지법 -->
       <label>현 직장/직책 *</label>
       <input name="currentJobTitle" required />
 
@@ -75,102 +71,67 @@
         <option>비대상</option>
       </select>
 
-      <!-- 관계 -->
-      <label>본인과 관계 *</label>
-      <select id="relation" name="relation" required>
+      <!-- 신랑/신부측 -->
+      <label>신랑/신부측 *</label>
+      <div class="row">
+        <label><input type="radio" name="side" value="groom" required> 신랑측</label>
+        <label><input type="radio" name="side" value="bride" required> 신부측</label>
+      </div>
+
+      <!-- 가족 정보 -->
+      <label>신랑 아버지 성함 *</label>
+      <input name="groomFather" required />
+      <label>신랑 어머니 성함 *</label>
+      <input name="groomMother" required />
+      <label>신랑 이름 *</label>
+      <input name="groomName" required />
+
+      <label>신부 아버지 성함 *</label>
+      <input name="brideFather" required />
+      <label>신부 어머니 성함 *</label>
+      <input name="brideMother" required />
+      <label>신부 이름 *</label>
+      <input name="brideName" required />
+
+      <!-- 형제/자매 순서 -->
+      <label>형제/자매 순서 *</label>
+      <select name="order" id="order" required>
         <option value="">선택</option>
-        <option value="본인">본인</option>
-        <option value="자녀">자녀</option>
+        <option>장남</option><option>차남</option><option>삼남</option>
+        <option>장녀</option><option>차녀</option><option>삼녀</option>
         <option value="기타">기타</option>
       </select>
-
-      <!-- 자녀 선택 시 -->
-      <div id="relationChildren" class="hidden">
-        <label>자녀 형제관계 *</label>
-        <select id="childOrder" name="childOrder">
-          <option value="">선택</option>
-          <option>장남</option><option>차남</option><option>삼남</option>
-          <option>장녀</option><option>차녀</option><option>삼녀</option>
-          <option value="기타">기타</option>
-        </select>
-        <div id="childOrderEtcWrap" class="hidden">
-          <label>자녀 형제관계 (기타) *</label>
-          <input id="childOrderEtc" name="childOrderEtc" />
-        </div>
-
-        <label>배우자 형제관계 *</label>
-        <select id="spouseOrder" name="spouseOrder">
-          <option value="">선택</option>
-          <option>장남</option><option>차남</option><option>삼남</option>
-          <option>장녀</option><option>차녀</option><option>삼녀</option>
-          <option value="기타">기타</option>
-        </select>
-        <div id="spouseOrderEtcWrap" class="hidden">
-          <label>배우자 형제관계 (기타) *</label>
-          <input id="spouseOrderEtc" name="spouseOrderEtc" />
-        </div>
-      </div>
-
-      <!-- 기타 관계 -->
-      <div id="relationEtcWrap" class="hidden">
-        <label>관계 (기타) *</label>
-        <input id="relationEtc" name="relationEtc" />
-      </div>
+      <input type="text" name="orderEtc" id="orderEtc" class="hidden" placeholder="기타 (직접 입력)" />
 
       <!-- 계좌 / 은행 -->
       <label>축의계좌 * <span class="hint">(본인 계좌)</span></label>
       <input name="bankNumber" required placeholder="000-0000-0000-00" />
 
       <label>은행 *</label>
-      <select id="bankName" name="bankName" required>
+      <select name="bankName" required>
         <option value="">선택</option>
         <option>국민</option><option>신한</option><option>우리</option>
         <option>하나</option><option>농협</option><option>기업</option>
         <option value="기타">기타</option>
       </select>
-      <div id="bankEtcWrap" class="hidden">
-        <label>은행 (기타) *</label>
-        <input id="bankNameEtc" name="bankNameEtc" placeholder="은행명을 입력하세요" />
-      </div>
 
-      <!-- 연락처 -->
       <label>연락처 *</label>
       <input id="phone" name="phone" required placeholder="010-1234-5678" />
 
       <!-- 예식일시 -->
-      <label>예식일시 *<span class="hint">※ 해외 예식의 경우 <b>현지시간</b>으로 입력해 주세요.</span></label>
+      <label>예식일시 *</label>
       <div class="row">
         <input type="date" id="eventDate" name="eventDate" required />
         <input type="time" id="eventTime" name="eventTime" step="600" required />
       </div>
 
-      <!-- 식장 / 주소 -->
+      <!-- 식장 -->
       <label>식장 주소 *</label>
-      <div class="row">
-        <input id="venueAddr" name="venueAddr" required placeholder="도로명 주소" />
-        <button class="btn" type="button" id="btnAddr">주소 검색</button>
-      </div>
+      <input id="venueAddr" name="venueAddr" required placeholder="도로명 주소" />
 
       <label>식장(상세) *</label>
       <input name="venue" required placeholder="예: ○○웨딩홀 3층 ○○홀" />
 
-      <!-- 기타 항목 -->
-      <label>스몰웨딩 여부 *</label>
-      <select name="isSmallWedding" required>
-        <option value="">선택</option><option>예</option><option>아니오</option>
-      </select>
-
-      <label>화환 수령 여부 *</label>
-      <select name="acceptWreath" required>
-        <option value="">선택</option><option>예</option><option>아니오</option>
-      </select>
-
-      <label>퇴임임원 문자알림 계좌번호 공개 여부 *</label>
-      <select name="accountDisclosure" required>
-        <option value="">선택</option><option>희망</option><option>비희망</option>
-      </select>
-
-      <!-- 동의 -->
       <div class="consent-line">
         <input type="checkbox" id="consent" required />
         <label for="consent">개인정보 수집·이용에 동의합니다</label>
@@ -179,72 +140,23 @@
       <button type="submit" class="btn primary">제출</button>
       <p id="msg"></p>
     </form>
+
+    <!-- 📎 게시판 안내문 미리보기 -->
+    <div id="previewBox" class="hidden">
+      <h3>📎 게시판 안내문 미리보기</h3>
+      <pre id="previewText"></pre>
+    </div>
   </div>
 
   <script>
-    // ====== 관계 동적 표시 ======
-    const relationSel = document.getElementById('relation');
-    const relationChildren = document.getElementById('relationChildren');
-    const relationEtcWrap = document.getElementById('relationEtcWrap');
-    const childOrder = document.getElementById('childOrder');
-    const spouseOrder = document.getElementById('spouseOrder');
-    const childOrderEtcWrap = document.getElementById('childOrderEtcWrap');
-    const spouseOrderEtcWrap = document.getElementById('spouseOrderEtcWrap');
-
-    relationSel.addEventListener('change', () => {
-      const v = relationSel.value;
-      if (v === '자녀') {
-        relationChildren.classList.remove('hidden');
-        relationEtcWrap.classList.add('hidden');
-      } else if (v === '기타') {
-        relationEtcWrap.classList.remove('hidden');
-        relationChildren.classList.add('hidden');
-      } else {
-        relationChildren.classList.add('hidden');
-        relationEtcWrap.classList.add('hidden');
-      }
+    // 기타 선택 시 입력칸 표시
+    const orderSel = document.getElementById('order');
+    const orderEtc = document.getElementById('orderEtc');
+    orderSel.addEventListener('change', () => {
+      orderEtc.classList.toggle('hidden', orderSel.value !== '기타');
     });
 
-    childOrder.addEventListener('change', () => {
-      childOrderEtcWrap.classList.toggle('hidden', childOrder.value !== '기타');
-    });
-    spouseOrder.addEventListener('change', () => {
-      spouseOrderEtcWrap.classList.toggle('hidden', spouseOrder.value !== '기타');
-    });
-
-    // ====== 은행 기타 입력 ======
-    const bankName = document.getElementById('bankName');
-    const bankEtcWrap = document.getElementById('bankEtcWrap');
-    bankName.addEventListener('change', () => {
-      bankEtcWrap.classList.toggle('hidden', bankName.value !== '기타');
-    });
-
-    // ====== 연락처 하이픈 ======
-    const phoneInput = document.getElementById('phone');
-    phoneInput.addEventListener('input', e => {
-      let v = e.target.value.replace(/[^0-9]/g, '');
-      if (v.length >= 10) {
-        v = v.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3');
-      }
-      e.target.value = v;
-    });
-
-    // ====== 카카오 주소 검색 ======
-    document.getElementById('btnAddr').addEventListener('click', () => openPostcode());
-    function openPostcode() {
-      const query = document.getElementById('venueAddr').value || '';
-      new daum.Postcode({
-        autoClose: true,
-        q: query,
-        oncomplete: function(data) {
-          document.getElementById("venueAddr").value =
-            data.roadAddress || data.jibunAddress || data.address || '';
-        }
-      }).open();
-    }
-
-    // ====== 제출 ======
-    const ENDPOINT = 'https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec';
+    const ENDPOINT = "<<<여기에 Apps Script 웹앱 URL /exec>>>";
 
     document.getElementById('form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -260,32 +172,32 @@
       payload.eventDateTime = eventDateTime;
       payload.consent = true;
 
-      if (payload.childOrder === '기타') {
-        payload.childOrder = document.getElementById('childOrderEtc').value.trim();
-      }
-      if (payload.spouseOrder === '기타') {
-        payload.spouseOrder = document.getElementById('spouseOrderEtc').value.trim();
-      }
-      if (payload.relation === '기타') {
-        payload.relationEtc = document.getElementById('relationEtc').value.trim();
-      }
-      if (payload.bankName === '기타') {
-        payload.bankName = document.getElementById('bankNameEtc').value.trim();
+      if (payload.order === '기타') {
+        payload.order = payload.orderEtc;
       }
 
       const msg = document.getElementById('msg');
       msg.textContent = '전송 중...'; msg.className = '';
 
       try {
-        const res = await fetch(ENDPOINT, { method: 'POST', body: JSON.stringify(payload) });
+        const res = await fetch(ENDPOINT, { 
+          method: 'POST', 
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload) 
+        });
         const data = await res.json();
+
         if (data.ok) {
           msg.textContent = '제출 완료되었습니다. 담당자가 확인 후 연락 드리겠습니다.';
           msg.className = 'success';
+
+          if (data.preview) {
+            document.getElementById('previewBox').classList.remove('hidden');
+            document.getElementById('previewText').textContent = data.preview;
+          }
+
           f.reset();
-          relationChildren.classList.add('hidden');
-          relationEtcWrap.classList.add('hidden');
-          bankEtcWrap.classList.add('hidden');
+          orderEtc.classList.add('hidden');
         } else {
           msg.textContent = '오류: ' + (data.error || '제출 실패');
           msg.className = 'error';
