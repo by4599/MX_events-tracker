@@ -1,176 +1,116 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>경사 정보 제출</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>추가 정보 입력</title>
 <style>
 body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:24px;color:#111}
-.card{max-width:680px;margin:0 auto;padding:20px;border:1px solid #ddd;border-radius:12px}
+.card{max-width:720px;margin:0 auto;padding:20px;border:1px solid #ddd;border-radius:12px}
 label{display:block;margin:12px 0 4px;font-weight:600}
 input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box}
-.row{display:flex;gap:8px}
-.btn{padding:12px 16px;border:0;border-radius:8px;background:#111;color:#fff;cursor:pointer}
-.hint{color:#666;font-size:12px;margin-top:4px}
-.success{color:#0a0;margin-top:12px}
-.error{color:#c00;margin-top:12px}
+.btn{padding:12px 16px;border:0;border-radius:8px;cursor:pointer}
+.btn.primary{background:#111;color:#fff}
+.preview{white-space:pre-wrap;border:1px solid #ccc;padding:12px;border-radius:8px;background:#f9f9f9;margin-top:12px}
 .hidden{display:none}
-pre{white-space:pre-wrap;border:1px solid #ccc;padding:12px;border-radius:8px;background:#f9f9f9}
 </style>
 </head>
 <body>
-  <div class="card">
-    <h2>경사 정보 제출</h2>
+<div class="card">
+  <h2>추가 정보 입력</h2>
+  <form id="form">
+    <label>임원 성함 *</label>
+    <input name="name" required />
 
-    <form id="form">
-      <!-- 기본 -->
-      <label>성명 *</label><input name="name" required>
-      <label>재직/퇴직 *</label>
-      <select name="empStatus" required><option value="">선택</option><option>재직</option><option>퇴직</option></select>
-      <label>근무 부서 *</label><input name="deptWhenEmployed" required>
-      <label>현 직장/직책 *</label><input name="currentJobTitle" required>
-      <label>청탁금지법 적용 여부 *</label>
-      <select name="antiGraft" required><option value="">선택</option><option>대상</option><option>비대상</option></select>
+    <label>재직/퇴직 *</label>
+    <select name="empStatus" required>
+      <option value="">선택</option><option>재직</option><option>퇴직</option>
+    </select>
 
-      <!-- 신랑/신부측 -->
-      <label>신랑/신부측 *</label>
-      <div class="row">
-        <label><input type="radio" name="side" value="groom" required> 신랑측</label>
-        <label><input type="radio" name="side" value="bride" required> 신부측</label>
-      </div>
+    <label>근무부서 *</label>
+    <input name="deptWhenEmployed" required />
 
-      <!-- 가족 -->
-      <label>신랑 아버지 *</label><input name="groomFather" required>
-      <label>신랑 어머니 *</label><input name="groomMother" required>
-      <label>신랑 이름 *</label><input name="groomName" required>
-      <label>신부 아버지 *</label><input name="brideFather" required>
-      <label>신부 어머니 *</label><input name="brideMother" required>
-      <label>신부 이름 *</label><input name="brideName" required>
+    <label>재직 시 직책 *</label>
+    <input name="pastJobTitle" required />
 
-      <!-- 형제/자매 -->
-      <label>형제/자매 순서 *</label>
-      <select name="order" id="order" required>
-        <option value="">선택</option>
-        <option>장남</option><option>차남</option><option>삼남</option>
-        <option>장녀</option><option>차녀</option><option>삼녀</option>
-        <option value="기타">기타</option>
+    <label>현 직장/직책 *</label>
+    <input name="currentJobTitle" required />
+
+    <label>청탁금지법 적용 여부 *</label>
+    <select id="antiGraft" name="antiGraft" required>
+      <option value="">선택</option><option value="비대상">비대상</option><option value="대상">대상</option>
+    </select>
+
+    <div id="antiGraftTarget" class="hidden">
+      <label>대상자 확인 *</label>
+      <select id="antiGraftWho" name="antiGraftWho">
+        <option value="">선택</option><option>본인</option><option>배우자</option>
       </select>
-      <input type="text" name="orderEtc" id="orderEtc" class="hidden" placeholder="기타 (직접 입력)">
-
-      <!-- 계좌/연락처 -->
-      <label>축의계좌 * <span class="hint">(본인 계좌)</span></label><input name="bankNumber" required placeholder="000-0000-0000-00">
-      <label>은행 *</label>
-      <select name="bankName" required><option value="">선택</option><option>국민</option><option>신한</option><option>우리</option><option>하나</option><option>농협</option><option>기업</option><option value="기타">기타</option></select>
-      <label>연락처 *</label><input id="phone" name="phone" required placeholder="010-1234-5678">
-
-      <!-- AI에서 넘어온 예식 정보 -->
-      <label>예식일 *</label><input type="date" id="eventDate" name="eventDate" required>
-      <label>예식 시간 *</label><input type="time" id="eventTime" name="eventTime" step="600" required>
-      <label>식장(상세) *</label><input name="venue" required placeholder="예: ○○웨딩홀 3층 ○○홀">
-      <label>식장 주소 *</label><input id="venueAddr" name="venueAddr" required placeholder="도로명 주소">
-
-      <div class="hint">제출은 게시 요청이며, 실제 게시는 담당자가 진행합니다.</div>
-      <div style="margin-top:8px"><label><input type="checkbox" id="consent" required> 개인정보 수집·이용에 동의합니다</label></div>
-
-      <button type="submit" class="btn" style="margin-top:12px">제출</button>
-      <p id="msg"></p>
-    </form>
-
-    <!-- 게시판 미리보기 -->
-    <div id="previewBox" class="hidden">
-      <h3>📎 게시판 안내문 미리보기</h3>
-      <pre id="previewText"></pre>
+      <div id="spouseJobWrap" class="hidden">
+        <label>배우자 현 직장/직책 *</label>
+        <input name="spouseJobTitle" />
+      </div>
     </div>
-  </div>
+
+    <label>축의 계좌번호 *</label>
+    <input name="bankNumber" required placeholder="000-0000-0000-00" />
+
+    <label>은행 *</label>
+    <select name="bankName" required>
+      <option value="">선택</option>
+      <option>국민</option><option>신한</option><option>우리</option>
+      <option>하나</option><option>농협</option><option>기업</option><option>기타</option>
+    </select>
+
+    <label>연락처 *</label>
+    <input name="phone" required placeholder="010-1234-5678" />
+
+    <label>퇴임임원 안내문자 연락처/계좌 공개 *</label>
+    <select name="accountDisclosure" required>
+      <option value="">선택</option><option>희망</option><option>비희망</option>
+    </select>
+
+    <button type="submit" class="btn primary">제출</button>
+    <p id="msg"></p>
+  </form>
+</div>
 
 <script>
-// Apps Script 웹앱 URL (/exec)
-const ENDPOINT = "https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec";
-// 동의 체크 미리 확인
-if (localStorage.getItem('consent') !== 'true') {
-  location.href = 'privacy.html';
-}
+const ENDPOINT="https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec";
 
-// invite에서 추출한 값 주입
-(function prefillFromInvite(){
-  try {
-    const raw = localStorage.getItem('inviteExtract');
-    if (!raw) return;
-    const { eventDate, eventTime, venue } = JSON.parse(raw);
-    if (eventDate) document.getElementById('eventDate').value = eventDate;
-    if (eventTime) document.getElementById('eventTime').value = eventTime;
-    if (venue)     document.querySelector('input[name=venue]').value = venue;
-  } catch(_) {}
-})();
-
-// 기타 선택 시 입력칸 표시
-const orderSel = document.getElementById('order');
-const orderEtc = document.getElementById('orderEtc');
-orderSel.addEventListener('change', ()=> orderEtc.classList.toggle('hidden', orderSel.value !== '기타'));
-
-// 폰 하이픈 표시
-document.getElementById('phone').addEventListener('input', e=>{
-  let v = e.target.value.replace(/[^0-9]/g,'');
-  if (v.length >= 10) v = v.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3');
-  e.target.value = v;
+// 청탁금지법 분기
+document.getElementById('antiGraft').addEventListener('change',e=>{
+  document.getElementById('antiGraftTarget').classList.toggle('hidden', e.target.value!=="대상");
+});
+document.getElementById('antiGraftWho').addEventListener('change',e=>{
+  document.getElementById('spouseJobWrap').classList.toggle('hidden', e.target.value!=="배우자");
 });
 
-// 제출 처리
-document.getElementById('form').addEventListener('submit', async (e)=>{
+// 제출
+document.getElementById('form').addEventListener('submit',async e=>{
   e.preventDefault();
-  const f = e.target;
-  const date = document.getElementById('eventDate').value;
-  const time = document.getElementById('eventTime').value;
-  const eventDateTime = (date && time) ? `${date}T${time}` : '';
+  const payload=Object.fromEntries(new FormData(e.target).entries());
 
-  const formData = new FormData(f);
-  const payload = Object.fromEntries(formData.entries());
-  payload.eventType = '경사';
-  payload.eventDateTime = eventDateTime;
-  payload.consent = true;
-  if (payload.order === '기타') payload.order = payload.orderEtc;
+  // inviteExtract 병합
+  const invite=JSON.parse(localStorage.getItem('inviteExtract')||'{}');
+  Object.assign(payload,invite);
 
-  const msg = document.getElementById('msg');
-  msg.textContent = '전송 중...'; msg.className='';
+  const msg=document.getElementById('msg');
+  msg.textContent="전송 중..."; msg.className="";
 
-  try {
-    const res = await fetch(ENDPOINT, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
-    });
-
-    // 방어적 파싱
-    const text = await res.text();
-    let data;
-    try { data = JSON.parse(text); }
-    catch(e){
-      console.error('서버 응답 원문:', text.slice(0,400));
-      msg.textContent = '응답 파싱 실패(HTML 수신). 웹앱 배포 URL(/exec)·권한을 확인하세요.';
-      msg.className = 'error';
-      return;
+  try{
+    const res=await fetch(ENDPOINT,{method:'POST',body:JSON.stringify(payload)});
+    const data=await res.json();
+    if(data.ok){
+      msg.textContent="제출 완료! 담당자가 확인 후 연락드립니다.";
+      msg.className="success";
+    }else{
+      msg.textContent="오류: "+(data.error||"제출 실패");
+      msg.className="error";
     }
-
-    if (data.ok) {
-      msg.textContent = '제출 완료되었습니다. 담당자가 확인 후 연락 드리겠습니다.';
-      msg.className = 'success';
-
-      if (data.preview) {
-        document.getElementById('previewBox').classList.remove('hidden');
-        document.getElementById('previewText').textContent = data.preview;
-      }
-
-      f.reset();
-      orderEtc.classList.add('hidden');
-      // 한 번 사용한 초깃값은 정리 (선택)
-      // localStorage.removeItem('inviteExtract');
-      // localStorage.removeItem('inviteUrl');
-    } else {
-      msg.textContent = '오류: ' + (data.error || '제출 실패');
-      msg.className = 'error';
-    }
-  } catch (err) {
-    msg.textContent = '네트워크 오류: ' + err.message;
-    msg.className = 'error';
+  }catch(err){
+    msg.textContent="네트워크 오류: "+err.message;
+    msg.className="error";
   }
 });
 </script>
