@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>결혼식 기본 정보</title>
+<title>추가 정보 입력</title>
 <style>
 body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:24px;background:#f9f9f9;color:#111}
 .card{max-width:720px;margin:0 auto;background:#fff;padding:24px;border-radius:16px;box-shadow:0 2px 6px rgba(0,0,0,0.1)}
@@ -22,25 +22,15 @@ input,select{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;box
 </head>
 <body>
 <div class="card">
-  <h2>결혼식 기본 정보</h2>
+  <h2>추가 정보 입력</h2>
 
-  <!-- Step 1: 모바일 청첩장 -->
-  <div class="section">
-    <label>모바일 청첩장 URL *</label>
-    <div class="row">
-      <input id="inviteUrl" placeholder="https://..." required />
-      <button class="btn secondary" id="btnExtract" type="button">정보 가져오기</button>
-    </div>
-    <p class="hint">※ 모바일 청첩장이 없으면 직접 입력해 주세요.</p>
-  </div>
-
-  <!-- Step 2: 입력창 (AI 결과 자동 채움) -->
+  <!-- 기본정보 (inviteExtract에서 채워짐 + 수정 가능) -->
   <div class="section">
     <label>신랑측 *</label>
-    <input id="groomInfo" placeholder="예: 서광훈 ∙ 정현순 의 아들 현종" />
+    <input id="groomInfo" />
 
     <label>신부측 *</label>
-    <input id="brideInfo" placeholder="예: 유원형 ∙ 김희숙 의 딸 승아" />
+    <input id="brideInfo" />
 
     <label>예식일시 *</label>
     <div class="row">
@@ -49,10 +39,10 @@ input,select{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;box
     </div>
 
     <label>예식장 *</label>
-    <input id="venue" placeholder="예: 라마다 서울 신도림 호텔 세인트그레이스홀" />
+    <input id="venue" />
 
     <label>예식장 주소 *</label>
-    <input id="venueAddr" placeholder="예: 서울 구로구 경인로 624, TEL: 02-2162-2100" />
+    <input id="venueAddr" />
 
     <label>스몰웨딩 여부 *</label>
     <select id="isSmallWedding">
@@ -60,85 +50,168 @@ input,select{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;box
     </select>
   </div>
 
-  <!-- Step 3: 미리보기 -->
+  <!-- 추가 정보 입력 -->
   <div class="section">
-    <button type="button" class="btn secondary" id="btnPreview">미리보기</button>
-    <div id="previewBox" class="preview hidden"></div>
+    <label>임원 성함 *</label>
+    <input id="name" required />
+
+    <label>재직/퇴직 *</label>
+    <select id="empStatus" required>
+      <option value="">선택</option><option>재직</option><option>퇴직</option>
+    </select>
+
+    <label>근무 부서 *</label>
+    <input id="deptWhenEmployed" placeholder="○○개발3그룹(무선)" />
+
+    <label>현 직장/직책 *</label>
+    <input id="currentJobTitle" />
+
+    <label>청탁금지법 대상 여부 *</label>
+    <select id="antiGraft">
+      <option value="">선택</option><option>대상</option><option>비대상</option>
+    </select>
+
+    <!-- 배우자 정보 추가 (청탁금지법 → 대상 → 배우자 선택 시 보이게) -->
+    <div id="spouseWrap" class="hidden">
+      <label>대상자 확인 *</label>
+      <select id="targetWho">
+        <option value="">선택</option><option>본인</option><option>배우자</option>
+      </select>
+      <div id="spouseJobWrap" class="hidden">
+        <label>배우자 현 직장/직책 *</label>
+        <input id="spouseJobTitle" />
+      </div>
+    </div>
+
+    <label>축의계좌 *</label>
+    <input id="bankNumber" placeholder="000-0000-0000-00" />
+
+    <label>은행 *</label>
+    <select id="bankName">
+      <option value="">선택</option>
+      <option>국민</option><option>신한</option><option>우리</option>
+      <option>하나</option><option>농협</option><option>기업</option>
+      <option value="기타">기타</option>
+    </select>
+    <div id="bankEtcWrap" class="hidden">
+      <label>은행 (기타)</label>
+      <input id="bankNameEtc" />
+    </div>
+
+    <label>연락처 *</label>
+    <input id="phone" placeholder="010-1234-5678" />
+
+    <label>퇴임임원 문자 알림 계좌번호 공개 여부 *</label>
+    <select id="accountDisclosure">
+      <option value="">선택</option><option>희망</option><option>비희망</option>
+    </select>
   </div>
 
-  <!-- Step 4: 다음 단계 -->
+  <!-- 미리보기 + 제출 -->
   <div class="section">
-    <button class="btn primary" id="goWedding">추가 정보 입력</button>
+    <button type="button" class="btn secondary" id="btnPreview">게시글 미리보기</button>
+    <div id="previewBox" class="preview hidden"></div>
+    <button class="btn primary" id="btnSubmit">제출</button>
   </div>
 </div>
 
 <script>
-// 🚩 Apps Script URL
-const ENDPOINT="https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec";
-
-// AI 정보 가져오기
-document.getElementById('btnExtract').addEventListener('click',async()=>{
-  const url=document.getElementById('inviteUrl').value.trim();
-  if(!url){ alert("URL을 입력하세요."); return; }
-
-  try{
-    const res=await fetch(ENDPOINT+'?action=extract&url='+encodeURIComponent(url));
-    const text=await res.text();
-    const data=JSON.parse(text);
-
-    if(data.ok){
-      // 입력칸 자동 채움
-      document.getElementById('groomInfo').value=`${data.groomFather||''} ∙ ${data.groomMother||''} 의 ${data.groomorder||''} ${data.groomName||''}`;
-      document.getElementById('brideInfo').value=`${data.brideFather||''} ∙ ${data.brideMother||''} 의 ${data.brideorder||''} ${data.brideName||''}`;
-      document.getElementById('eventDate').value=data.eventDate||'';
-      document.getElementById('eventTime').value=data.eventTime||'';
-      document.getElementById('venue').value=data.venue||'';
-      document.getElementById('venueAddr').value=data.venueAddr||'';
-      alert("청첩장 정보가 자동으로 채워졌습니다. 필요한 경우 수정하세요.");
-    }else{
-      alert("추출 실패: 수기로 입력해 주세요.");
-    }
-  }catch(err){
-    alert("네트워크 오류: "+err.message);
+// ====== 초기에 inviteExtract 값 반영 ======
+window.addEventListener('DOMContentLoaded',()=>{
+  const saved=localStorage.getItem('inviteExtract');
+  if(saved){
+    try{
+      const d=JSON.parse(saved);
+      if(d.groomInfo) document.getElementById('groomInfo').value=d.groomInfo;
+      if(d.brideInfo) document.getElementById('brideInfo').value=d.brideInfo;
+      if(d.eventDate) document.getElementById('eventDate').value=d.eventDate;
+      if(d.eventTime) document.getElementById('eventTime').value=d.eventTime;
+      if(d.venue) document.getElementById('venue').value=d.venue;
+      if(d.venueAddr) document.getElementById('venueAddr').value=d.venueAddr;
+      if(d.isSmallWedding) document.getElementById('isSmallWedding').value=d.isSmallWedding;
+    }catch(e){ console.error("inviteExtract parse error",e); }
   }
 });
 
-// 미리보기
+// ====== 청탁금지법 로직 ======
+document.getElementById('antiGraft').addEventListener('change',()=>{
+  const v=document.getElementById('antiGraft').value;
+  document.getElementById('spouseWrap').classList.toggle('hidden',v!=="대상");
+});
+document.getElementById('targetWho').addEventListener('change',()=>{
+  const v=document.getElementById('targetWho').value;
+  document.getElementById('spouseJobWrap').classList.toggle('hidden',v!=="배우자");
+});
+
+// ====== 은행 기타 ======
+document.getElementById('bankName').addEventListener('change',()=>{
+  const v=document.getElementById('bankName').value;
+  document.getElementById('bankEtcWrap').classList.toggle('hidden',v!=="기타");
+});
+
+// ====== 미리보기 ======
 document.getElementById('btnPreview').addEventListener('click',()=>{
-  const groom=document.getElementById('groomInfo').value.trim();
-  const bride=document.getElementById('brideInfo').value.trim();
+  const groom=document.getElementById('groomInfo').value;
+  const bride=document.getElementById('brideInfo').value;
   const date=document.getElementById('eventDate').value;
   const time=document.getElementById('eventTime').value;
-  const venue=document.getElementById('venue').value.trim();
-  const addr=document.getElementById('venueAddr').value.trim();
-  const small=document.getElementById('isSmallWedding').value;
-
-  if(!groom||!bride||!date||!time||!venue||!addr){
-    alert("모든 필수 항목을 입력하세요."); return;
-  }
+  const venue=document.getElementById('venue').value;
+  const addr=document.getElementById('venueAddr').value;
+  const name=document.getElementById('name').value;
+  const job=document.getElementById('currentJobTitle').value;
+  const phone=document.getElementById('phone').value;
+  const bank=document.getElementById('bankName').value==="기타"
+    ? document.getElementById('bankNameEtc').value
+    : document.getElementById('bankName').value;
+  const bankNum=document.getElementById('bankNumber').value;
 
   const preview=`${groom}
 ${bride}
 □ 일 시 : ${date} ${time}
 □ 장 소 : ${venue}
            (${addr})
-□ 스몰웨딩 여부 : ${small||"선택안함"}`;
+□ 연락처 : ${phone} (${name} ${job})
+□ 축의계좌 : ${bank} ${bankNum} (${name})`;
 
   document.getElementById('previewBox').textContent=preview;
   document.getElementById('previewBox').classList.remove('hidden');
-
-  // wedding.html에 넘길 데이터 저장
-  localStorage.setItem('inviteExtract',JSON.stringify({
-    groomInfo:groom, brideInfo:bride,
-    eventDate:date, eventTime:time,
-    venue:venue, venueAddr:addr,
-    isSmallWedding:small
-  }));
 });
 
-// 다음 단계
-document.getElementById('goWedding').addEventListener('click',()=>{
-  location.href='wedding.html';
+// ====== 제출 ======
+const ENDPOINT="https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec";
+document.getElementById('btnSubmit').addEventListener('click',async()=>{
+  const payload={
+    groomInfo:document.getElementById('groomInfo').value,
+    brideInfo:document.getElementById('brideInfo').value,
+    eventDate:document.getElementById('eventDate').value,
+    eventTime:document.getElementById('eventTime').value,
+    venue:document.getElementById('venue').value,
+    venueAddr:document.getElementById('venueAddr').value,
+    isSmallWedding:document.getElementById('isSmallWedding').value,
+    name:document.getElementById('name').value,
+    empStatus:document.getElementById('empStatus').value,
+    deptWhenEmployed:document.getElementById('deptWhenEmployed').value,
+    currentJobTitle:document.getElementById('currentJobTitle').value,
+    antiGraft:document.getElementById('antiGraft').value,
+    targetWho:document.getElementById('targetWho').value,
+    spouseJobTitle:document.getElementById('spouseJobTitle').value,
+    bankNumber:document.getElementById('bankNumber').value,
+    bankName:document.getElementById('bankName').value==="기타"
+      ? document.getElementById('bankNameEtc').value
+      : document.getElementById('bankName').value,
+    phone:document.getElementById('phone').value,
+    accountDisclosure:document.getElementById('accountDisclosure').value
+  };
+
+  try{
+    const res=await fetch(ENDPOINT,{method:"POST",body:JSON.stringify(payload)});
+    const data=await res.json();
+    if(data.ok){
+      alert("제출 완료! 담당자에게 전달되었습니다.");
+    }else{
+      alert("오류: "+data.error);
+    }
+  }catch(err){ alert("네트워크 오류: "+err.message); }
 });
 </script>
 </body>
