@@ -20,22 +20,19 @@ pre{white-space:pre-wrap;border:1px solid #ccc;padding:12px;border-radius:8px;ba
 <body>
   <div class="card">
     <h2>청첩장 URL 분석</h2>
-    <p class="hint">개인정보 동의 후 URL을 입력하면, 예식일/시간/예식장 정보를 AI로 추출합니다.</p>
+    <p class="hint">개인정보 동의 후 URL을 입력하면, 청첩장 내용을 불러와 게시판 형식으로 보여줍니다.</p>
 
     <label>모바일 청첩장 URL</label>
     <div class="row">
       <input id="inviteUrl" placeholder="https://..." />
       <button class="btn" id="btnExtract" type="button">정보 가져오기</button>
+      <button class="btn" id="btnSkip" type="button">수기 입력</button>
     </div>
     <p id="extractMsg" class="hint"></p>
 
     <div id="result" style="display:none">
-      <h3>추출 결과 (JSON)</h3>
-      <pre id="resultPre"></pre>
-
-      <h3>📎 게시판 안내문 형식</h3>
+      <h3>청첩장 내용 확인</h3>
       <pre id="boardPreview"></pre>
-
       <button class="btn" id="goDetail">세부 정보 확인/제출로 이동</button>
     </div>
   </div>
@@ -46,19 +43,18 @@ if (localStorage.getItem('consent') !== 'true') {
   location.href = 'privacy.html';
 }
 
-// 🚩 Apps Script 웹앱 URL (/exec) 정확히 입력
+// 🚩 Apps Script 웹앱 URL (/exec)
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec";
 
+// 정보 가져오기 버튼
 document.getElementById('btnExtract').addEventListener('click', async ()=>{
   const url = document.getElementById('inviteUrl').value.trim();
   const msg = document.getElementById('extractMsg');
   const result = document.getElementById('result');
-  const pre = document.getElementById('resultPre');
   const board = document.getElementById('boardPreview');
 
   result.style.display = 'none';
   msg.textContent = '';
-  pre.textContent = '';
   board.textContent = '';
 
   if (!url) { msg.textContent = 'URL을 입력하세요.'; return; }
@@ -83,35 +79,19 @@ document.getElementById('btnExtract').addEventListener('click', async ()=>{
       return;
     }
 
-    // JSON 요약 표시
-    const summary = {
-      groomFather: data.groomFather || '',
-      groomMother: data.groomMother || '',
-      groomName:   data.groomName   || '',
-      brideFather: data.brideFather || '',
-      brideMother: data.brideMother || '',
-      brideName:   data.brideName   || '',
-      order:       data.order       || '',
-      eventDate:   data.eventDate   || '',
-      eventTime:   data.eventTime   || '',
-      venue:       data.venue       || '',
-      venueAddr:   data.venueAddr   || ''
-    };
-    pre.textContent = JSON.stringify(summary, null, 2);
-
     // 안내문 형식 표시
     if (data.boardText) {
       board.textContent = data.boardText;
     } else {
-      board.textContent = '(안내문 형식 추출 실패)';
+      board.textContent = '(안내문 추출 실패, wedding.html에서 직접 입력하세요)';
     }
 
     result.style.display = 'block';
-    msg.textContent = '정보가 채워졌습니다.';
+    msg.textContent = '청첩장 정보가 채워졌습니다.';
     msg.className = 'success';
 
-    // 다음 단계에 넘기기 (세부 입력 페이지용)
-    localStorage.setItem('inviteExtract', JSON.stringify(summary));
+    // 다음 단계에 넘기기
+    localStorage.setItem('inviteExtract', JSON.stringify(data));
     localStorage.setItem('inviteUrl', url);
 
   } catch (err) {
@@ -120,6 +100,14 @@ document.getElementById('btnExtract').addEventListener('click', async ()=>{
   }
 });
 
+// 수기 입력 버튼
+document.getElementById('btnSkip').addEventListener('click', ()=>{
+  localStorage.setItem('inviteExtract', '{}'); // 비워둔 상태
+  localStorage.setItem('inviteUrl', '');
+  location.href = 'wedding.html';
+});
+
+// 세부 정보 이동 버튼
 document.getElementById('goDetail').addEventListener('click', ()=>{
   location.href = 'wedding.html';
 });
