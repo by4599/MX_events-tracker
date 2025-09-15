@@ -38,8 +38,8 @@ if (localStorage.getItem('consent') !== 'true') {
   // 동의 안했으면 첫 페이지로
   location.href = 'privacy.html';
 }
-
-const ENDPOINT = https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec'<<<여기에 Apps Script 웹앱 URL /exec>>>';
+// Apps Script 웹앱 URL (/exec)
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec";
 
 document.getElementById('btnExtract').addEventListener('click', async ()=>{
   const url = document.getElementById('inviteUrl').value.trim();
