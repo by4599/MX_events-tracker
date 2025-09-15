@@ -1,8 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>추가 정보 입력</title>
 <style>
 body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:24px;background:#f9f9f9;color:#111}
@@ -13,7 +12,6 @@ input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;box
 .btn{padding:12px 16px;border:0;border-radius:8px;cursor:pointer;font-weight:600}
 .btn.primary{background:#111;color:#fff;width:100%;margin-top:16px}
 .preview{white-space:pre-wrap;border:1px solid #ddd;padding:16px;border-radius:12px;background:#fafafa;margin-top:16px}
-.section{margin-top:24px;padding-top:16px;border-top:1px solid #eee}
 .hidden{display:none}
 </style>
 </head>
@@ -21,7 +19,6 @@ input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;box
 <div class="card">
   <h2>추가 정보 입력</h2>
 
-  <!-- 추가 정보 -->
   <label>임원 성함 *</label>
   <input id="name" />
   <label>재직/퇴직 *</label>
@@ -31,17 +28,7 @@ input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;box
   <label>현 직장/직책 *</label>
   <input id="currentJobTitle" />
   <label>청탁금지법 대상 여부 *</label>
-  <select id="antiGraft">
-    <option value="">선택</option><option>대상</option><option>비대상</option>
-  </select>
-  <div id="spouseWrap" class="hidden">
-    <label>대상자 확인 *</label>
-    <select id="targetWho"><option value="">선택</option><option>본인</option><option>배우자</option></select>
-    <div id="spouseJobWrap" class="hidden">
-      <label>배우자 현 직장/직책 *</label>
-      <input id="spouseJobTitle" />
-    </div>
-  </div>
+  <select id="antiGraft"><option value="">선택</option><option>대상</option><option>비대상</option></select>
   <label>축의계좌 *</label>
   <input id="bankNumber" />
   <label>은행 *</label>
@@ -59,14 +46,6 @@ input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;box
 <script>
 const invite=JSON.parse(localStorage.getItem('inviteInfo')||'{}');
 
-// 청탁금지법 대상여부 로직
-document.getElementById('antiGraft').addEventListener('change',e=>{
-  document.getElementById('spouseWrap').classList.toggle('hidden',e.target.value!=="대상");
-});
-document.getElementById('targetWho').addEventListener('change',e=>{
-  document.getElementById('spouseJobWrap').classList.toggle('hidden',e.target.value==="배우자");
-});
-
 // 미리보기
 document.getElementById('btnPreview').addEventListener('click',()=>{
   const name=document.getElementById('name').value;
@@ -82,13 +61,14 @@ ${invite.brideFather} ∙ ${invite.brideMother} 의 ${invite.brideOrder} ${invit
            (${invite.venueAddr})
 □ 연락처 : ${phone} (${name} ${job})
 □ 축의계좌 : ${bank} ${bankNum} (${name})
+□ 스몰웨딩 여부 : ${invite.isSmallWedding}
 □ 청첩장 URL : ${invite.noInvite?"없음":invite.inviteUrl}`;
 
   document.getElementById('previewBox').textContent=preview;
   document.getElementById('previewBox').classList.remove('hidden');
 });
 
-// 제출 (Apps Script 연동)
+// 제출
 document.getElementById('btnSubmit').addEventListener('click',async()=>{
   const payload={
     ...invite,
@@ -97,8 +77,6 @@ document.getElementById('btnSubmit').addEventListener('click',async()=>{
     deptWhenEmployed:document.getElementById('deptWhenEmployed').value,
     currentJobTitle:document.getElementById('currentJobTitle').value,
     antiGraft:document.getElementById('antiGraft').value,
-    targetWho:document.getElementById('targetWho').value,
-    spouseJobTitle:document.getElementById('spouseJobTitle').value,
     bankNumber:document.getElementById('bankNumber').value,
     bankName:document.getElementById('bankName').value,
     phone:document.getElementById('phone').value,
@@ -108,11 +86,3 @@ document.getElementById('btnSubmit').addEventListener('click',async()=>{
   const ENDPOINT="https://script.google.com/macros/s/YOUR_DEPLOY_ID/exec";
   try{
     const res=await fetch(ENDPOINT,{method:"POST",body:JSON.stringify(payload)});
-    const data=await res.json();
-    if(data.ok){alert("제출 완료!");}
-    else{alert("오류: "+(data.error||"제출 실패"));}
-  }catch(err){alert("네트워크 오류: "+err.message);}
-});
-</script>
-</body>
-</html>
