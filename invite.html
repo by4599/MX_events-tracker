@@ -1,7 +1,8 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>청첩장 URL 분석</title>
 <style>
 body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:24px;color:#111}
@@ -12,23 +13,29 @@ input{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;box-sizing
 .btn{padding:12px 16px;border:0;border-radius:8px;background:#111;color:#fff;cursor:pointer}
 .hint{color:#666;font-size:12px;margin-top:4px}
 pre{white-space:pre-wrap;border:1px solid #ccc;padding:12px;border-radius:8px;background:#f9f9f9}
+.success{color:#0a0;margin-top:12px}
+.error{color:#c00;margin-top:12px}
 </style>
 </head>
 <body>
   <div class="card">
     <h2>청첩장 URL 분석</h2>
-    <p class="hint">개인정보 동의 후 URL을 입력하면, 예식일/시간/예식장을 AI로 추출합니다.</p>
+    <p class="hint">개인정보 동의 후 URL을 입력하면, 예식일/시간/예식장 정보를 AI로 추출합니다.</p>
 
     <label>모바일 청첩장 URL</label>
     <div class="row">
       <input id="inviteUrl" placeholder="https://..." />
-      <button class="btn" id="btnExtract">정보 가져오기</button>
+      <button class="btn" id="btnExtract" type="button">정보 가져오기</button>
     </div>
     <p id="extractMsg" class="hint"></p>
 
     <div id="result" style="display:none">
-      <h3>추출 결과</h3>
+      <h3>추출 결과 (JSON)</h3>
       <pre id="resultPre"></pre>
+
+      <h3>📎 게시판 안내문 형식</h3>
+      <pre id="boardPreview"></pre>
+
       <button class="btn" id="goDetail">세부 정보 확인/제출로 이동</button>
     </div>
   </div>
@@ -38,7 +45,8 @@ if (localStorage.getItem('consent') !== 'true') {
   // 동의 안했으면 첫 페이지로
   location.href = 'privacy.html';
 }
-// Apps Script 웹앱 URL (/exec)
+
+// 🚩 Apps Script 웹앱 URL (/exec) 정확히 입력
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec";
 
 document.getElementById('btnExtract').addEventListener('click', async ()=>{
@@ -46,51 +54,22 @@ document.getElementById('btnExtract').addEventListener('click', async ()=>{
   const msg = document.getElementById('extractMsg');
   const result = document.getElementById('result');
   const pre = document.getElementById('resultPre');
+  const board = document.getElementById('boardPreview');
+
   result.style.display = 'none';
   msg.textContent = '';
+  pre.textContent = '';
+  board.textContent = '';
 
   if (!url) { msg.textContent = 'URL을 입력하세요.'; return; }
   msg.textContent = '분석 중...';
 
   try {
-    // 방어적 파싱: 먼저 text로 받고 JSON 시도
     const res = await fetch(ENDPOINT + '?action=extract&url=' + encodeURIComponent(url));
     const text = await res.text();
     let data;
-    try { data = JSON.parse(text); }
-    catch(e){
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
       console.error('서버 응답 원문:', text.slice(0,400));
-      msg.textContent = '서버가 JSON 대신 HTML을 반환했습니다. 배포 URL(/exec)·권한(모든 사용자)을 확인하세요.';
-      return;
-    }
-
-    if (!data.ok) {
-      msg.textContent = '추출 실패: ' + (data.error || '원인 미상');
-      return;
-    }
-
-    // 추출 결과 표시
-    const summary = {
-      eventDate: data.eventDate || '',
-      eventTime: data.eventTime || '',
-      venue:     data.venue || ''
-    };
-    pre.textContent = JSON.stringify(summary, null, 2);
-    result.style.display = 'block';
-    msg.textContent = '정보가 채워졌습니다.';
-
-    // 다음 단계에 넘기기
-    localStorage.setItem('inviteExtract', JSON.stringify(summary));
-    localStorage.setItem('inviteUrl', url);
-
-  } catch (err) {
-    msg.textContent = '네트워크 오류: ' + err.message;
-  }
-});
-
-document.getElementById('goDetail').addEventListener('click', ()=>{
-  location.href = 'wedding.html';
-});
-</script>
-</body>
-</html>
+      msg
