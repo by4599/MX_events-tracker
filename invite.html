@@ -91,7 +91,21 @@ document.getElementById('btnExtract').addEventListener('click', async ()=>{
     msg.className = 'success';
 
     // 다음 단계에 넘기기
-    localStorage.setItem('inviteExtract', JSON.stringify(data));
+    const summary = {
+      groomFather: data.groomFather || '',
+      groomMother: data.groomMother || '',
+      groomName:   data.groomName   || '',
+      groomOrder:  data.groomOrder  || '',
+      brideFather: data.brideFather || '',
+      brideMother: data.brideMother || '',
+      brideName:   data.brideName   || '',
+      brideOrder:  data.brideOrder  || '',
+      eventDate:   data.eventDate   || '',
+      eventTime:   data.eventTime   || '',
+      venue:       data.venue       || '',
+      venueAddr:   data.venueAddr   || ''
+    };
+    localStorage.setItem('inviteExtract', JSON.stringify(summary));
     localStorage.setItem('inviteUrl', url);
 
   } catch (err) {
