@@ -24,33 +24,49 @@ input,select{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;box
 <div class="card">
   <h2>추가 정보 입력</h2>
 
-  <!-- 기본정보 -->
+  <!-- 신랑측 -->
   <div class="section">
     <h3>신랑측</h3>
-    <label>아버지 *</label>
-    <input id="groomFather" />
-    <label>어머니 *</label>
-    <input id="groomMother" />
-    <label>자녀 이름 *</label>
-    <input id="groomName" placeholder="예: 현종" />
+    <label>아빠 이름 *</label>
+    <input id="groomFather" placeholder="예: 서광훈" />
+
+    <label>엄마 이름 *</label>
+    <input id="groomMother" placeholder="예: 정현순" />
+
     <label>자녀 순서 *</label>
     <select id="groomOrder">
-      <option value="">선택</option><option>장남</option><option>차남</option><option>삼남</option><option>아들</option>
+      <option value="">선택</option>
+      <option>장남</option><option>차남</option><option>삼남</option><option>아들</option>
+      <option>장녀</option><option>차녀</option><option>삼녀</option><option>딸</option>
     </select>
 
-    <h3>신부측</h3>
-    <label>아버지 *</label>
-    <input id="brideFather" />
-    <label>어머니 *</label>
-    <input id="brideMother" />
     <label>자녀 이름 *</label>
-    <input id="brideName" placeholder="예: 승아" />
+    <input id="groomName" placeholder="예: 현종" />
+  </div>
+
+  <!-- 신부측 -->
+  <div class="section">
+    <h3>신부측</h3>
+    <label>아빠 이름 *</label>
+    <input id="brideFather" placeholder="예: 유원형" />
+
+    <label>엄마 이름 *</label>
+    <input id="brideMother" placeholder="예: 김희숙" />
+
     <label>자녀 순서 *</label>
     <select id="brideOrder">
-      <option value="">선택</option><option>장녀</option><option>차녀</option><option>삼녀</option><option>딸</option>
+      <option value="">선택</option>
+      <option>장남</option><option>차남</option><option>삼남</option><option>아들</option>
+      <option>장녀</option><option>차녀</option><option>삼녀</option><option>딸</option>
     </select>
 
-    <h3>예식</h3>
+    <label>자녀 이름 *</label>
+    <input id="brideName" placeholder="예: 승아" />
+  </div>
+
+  <!-- 예식 -->
+  <div class="section">
+    <h3>예식 정보</h3>
     <label>예식일시 *</label>
     <div class="row">
       <input type="date" id="eventDate" />
@@ -58,9 +74,9 @@ input,select{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;box
     </div>
 
     <label>예식장 *</label>
-    <input id="venue" />
+    <input id="venue" placeholder="예: 라마다 서울 신도림 호텔 세인트그레이스홀" />
     <label>예식장 주소 *</label>
-    <input id="venueAddr" />
+    <input id="venueAddr" placeholder="예: 서울 구로구 경인로 624, TEL: 02-2162-2100" />
     <label>스몰웨딩 여부 *</label>
     <select id="isSmallWedding">
       <option value="">선택</option><option>예</option><option>아니오</option>
@@ -69,6 +85,7 @@ input,select{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;box
 
   <!-- 추가 정보 -->
   <div class="section">
+    <h3>추가 입력</h3>
     <label>임원 성함 *</label>
     <input id="name" />
     <label>재직/퇴직 *</label>
@@ -157,44 +174,6 @@ ${brideF} ∙ ${brideM} 의 ${brideO} ${brideN}
 
   document.getElementById('previewBox').textContent=preview;
   document.getElementById('previewBox').classList.remove('hidden');
-});
-
-// ====== 제출 ======
-const ENDPOINT="https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec";
-document.getElementById('btnSubmit').addEventListener('click',async()=>{
-  const payload={
-    groomFather:document.getElementById('groomFather').value,
-    groomMother:document.getElementById('groomMother').value,
-    groomName:document.getElementById('groomName').value,
-    groomOrder:document.getElementById('groomOrder').value,
-    brideFather:document.getElementById('brideFather').value,
-    brideMother:document.getElementById('brideMother').value,
-    brideName:document.getElementById('brideName').value,
-    brideOrder:document.getElementById('brideOrder').value,
-    eventDate:document.getElementById('eventDate').value,
-    eventTime:document.getElementById('eventTime').value,
-    venue:document.getElementById('venue').value,
-    venueAddr:document.getElementById('venueAddr').value,
-    isSmallWedding:document.getElementById('isSmallWedding').value,
-    name:document.getElementById('name').value,
-    empStatus:document.getElementById('empStatus').value,
-    deptWhenEmployed:document.getElementById('deptWhenEmployed').value,
-    currentJobTitle:document.getElementById('currentJobTitle').value,
-    antiGraft:document.getElementById('antiGraft').value,
-    targetWho:document.getElementById('targetWho').value,
-    spouseJobTitle:document.getElementById('spouseJobTitle').value,
-    bankNumber:document.getElementById('bankNumber').value,
-    bankName:document.getElementById('bankName').value==="기타"?document.getElementById('bankNameEtc').value:document.getElementById('bankName').value,
-    phone:document.getElementById('phone').value,
-    accountDisclosure:document.getElementById('accountDisclosure').value
-  };
-
-  try{
-    const res=await fetch(ENDPOINT,{method:"POST",body:JSON.stringify(payload)});
-    const data=await res.json();
-    if(data.ok){ alert("제출 완료! 담당자에게 전달되었습니다."); }
-    else{ alert("오류: "+data.error); }
-  }catch(err){ alert("네트워크 오류: "+err.message); }
 });
 </script>
 </body>
