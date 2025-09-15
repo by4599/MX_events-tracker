@@ -12,11 +12,10 @@
     .card { max-width: 640px; margin: 0 auto; padding: 20px; border: 1px solid var(--border); border-radius: 12px; }
     h2 { margin:0 0 12px; }
     label { display:block; margin:12px 0 4px; font-weight:600; }
-    input, select, textarea {
+    input, select {
       width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; font:inherit;
       box-sizing:border-box;
     }
-    textarea { min-height: 80px; }
     .row { display:flex; gap:8px; }
     .btn { padding:12px 16px; border:0; border-radius:8px; cursor:pointer; }
     .btn.primary { background:#111; color:#fff; }
@@ -26,7 +25,6 @@
     .hidden { display:none; }
     .consent-line { display:flex; align-items:center; gap:8px; margin-top:8px; white-space:nowrap; }
     .consent-line input[type="checkbox"] { margin:0; }
-    /* 게시판 미리보기 박스 */
     #previewBox { margin-top:20px; }
     #previewText { white-space:pre-wrap; border:1px solid #ccc; padding:12px; border-radius:8px; background:#f9f9f9; }
   </style>
@@ -35,7 +33,7 @@
   <div class="card">
     <h2>경사 정보 제출</h2>
 
-    <!-- 개인정보 수집 고지 -->
+    <!-- 개인정보 고지 -->
     <script>
       alert(
         "본 설문은 MX사업부 임원 경조사 게시를 위해 정보를 수집합니다.\n" +
@@ -47,28 +45,24 @@
     </script>
 
     <form id="form">
-      <!-- 성명 / 재직 -->
+      <!-- 기본 정보 -->
       <label>성명 *</label>
       <input name="name" required />
 
       <label>재직/퇴직 *</label>
       <select name="empStatus" required>
-        <option value="">선택</option>
-        <option>재직</option>
-        <option>퇴직</option>
+        <option value="">선택</option><option>재직</option><option>퇴직</option>
       </select>
 
-      <label>근무 부서 *<span class="hint">(재직 시)</span></label>
-      <input name="deptWhenEmployed" required placeholder="○○개발3그룹(무선)" />
+      <label>근무 부서 *</label>
+      <input name="deptWhenEmployed" required />
 
       <label>현 직장/직책 *</label>
       <input name="currentJobTitle" required />
 
-      <label>청탁금지법 적용 여부(배우자 포함) *</label>
+      <label>청탁금지법 적용 여부 *</label>
       <select name="antiGraft" required>
-        <option value="">선택</option>
-        <option>대상</option>
-        <option>비대상</option>
+        <option value="">선택</option><option>대상</option><option>비대상</option>
       </select>
 
       <!-- 신랑/신부측 -->
@@ -78,22 +72,16 @@
         <label><input type="radio" name="side" value="bride" required> 신부측</label>
       </div>
 
-      <!-- 가족 정보 -->
-      <label>신랑 아버지 성함 *</label>
-      <input name="groomFather" required />
-      <label>신랑 어머니 성함 *</label>
-      <input name="groomMother" required />
-      <label>신랑 이름 *</label>
-      <input name="groomName" required />
+      <!-- 가족 -->
+      <label>신랑 아버지 *</label><input name="groomFather" required />
+      <label>신랑 어머니 *</label><input name="groomMother" required />
+      <label>신랑 이름 *</label><input name="groomName" required />
 
-      <label>신부 아버지 성함 *</label>
-      <input name="brideFather" required />
-      <label>신부 어머니 성함 *</label>
-      <input name="brideMother" required />
-      <label>신부 이름 *</label>
-      <input name="brideName" required />
+      <label>신부 아버지 *</label><input name="brideFather" required />
+      <label>신부 어머니 *</label><input name="brideMother" required />
+      <label>신부 이름 *</label><input name="brideName" required />
 
-      <!-- 형제/자매 순서 -->
+      <!-- 형제/자매 -->
       <label>형제/자매 순서 *</label>
       <select name="order" id="order" required>
         <option value="">선택</option>
@@ -103,20 +91,24 @@
       </select>
       <input type="text" name="orderEtc" id="orderEtc" class="hidden" placeholder="기타 (직접 입력)" />
 
-      <!-- 계좌 / 은행 -->
-      <label>축의계좌 * <span class="hint">(본인 계좌)</span></label>
-      <input name="bankNumber" required placeholder="000-0000-0000-00" />
-
+      <!-- 계좌 -->
+      <label>축의계좌 *</label><input name="bankNumber" required />
       <label>은행 *</label>
       <select name="bankName" required>
-        <option value="">선택</option>
-        <option>국민</option><option>신한</option><option>우리</option>
-        <option>하나</option><option>농협</option><option>기업</option>
-        <option value="기타">기타</option>
+        <option value="">선택</option><option>국민</option><option>신한</option>
+        <option>우리</option><option>하나</option><option>농협</option><option>기업</option><option value="기타">기타</option>
       </select>
 
-      <label>연락처 *</label>
-      <input id="phone" name="phone" required placeholder="010-1234-5678" />
+      <!-- 연락처 -->
+      <label>연락처 *</label><input id="phone" name="phone" required placeholder="010-1234-5678" />
+
+      <!-- 청첩장 URL + AI 추출 -->
+      <label>모바일 청첩장 URL</label>
+      <div class="row">
+        <input id="inviteUrl" name="inviteUrl" placeholder="https://..." />
+        <button type="button" class="btn" id="btnExtract">정보 가져오기</button>
+      </div>
+      <p id="extractMsg" class="hint"></p>
 
       <!-- 예식일시 -->
       <label>예식일시 *</label>
@@ -125,13 +117,11 @@
         <input type="time" id="eventTime" name="eventTime" step="600" required />
       </div>
 
-      <!-- 식장 -->
-      <label>식장 주소 *</label>
-      <input id="venueAddr" name="venueAddr" required placeholder="도로명 주소" />
+      <!-- 장소 -->
+      <label>식장 주소 *</label><input id="venueAddr" name="venueAddr" required />
+      <label>식장(상세) *</label><input name="venue" required />
 
-      <label>식장(상세) *</label>
-      <input name="venue" required placeholder="예: ○○웨딩홀 3층 ○○홀" />
-
+      <!-- 동의 -->
       <div class="consent-line">
         <input type="checkbox" id="consent" required />
         <label for="consent">개인정보 수집·이용에 동의합니다</label>
@@ -141,7 +131,7 @@
       <p id="msg"></p>
     </form>
 
-    <!-- 📎 게시판 안내문 미리보기 -->
+    <!-- 게시판 미리보기 -->
     <div id="previewBox" class="hidden">
       <h3>📎 게시판 안내문 미리보기</h3>
       <pre id="previewText"></pre>
@@ -149,53 +139,70 @@
   </div>
 
   <script>
-    // 기타 선택 시 입력칸 표시
     const orderSel = document.getElementById('order');
     const orderEtc = document.getElementById('orderEtc');
     orderSel.addEventListener('change', () => {
       orderEtc.classList.toggle('hidden', orderSel.value !== '기타');
     });
 
-    const ENDPOINT = "<<<여기에 Apps Script 웹앱 URL /exec>>>";
+    const ENDPOINT = "<<<Apps Script 배포 URL /exec>>>";
 
+    // AI 정보 추출
+    document.getElementById("btnExtract").addEventListener("click", async () => {
+      const url = document.getElementById("inviteUrl").value.trim();
+      if (!url) {
+        document.getElementById("extractMsg").textContent = "URL을 입력하세요.";
+        return;
+      }
+      document.getElementById("extractMsg").textContent = "분석 중...";
+
+      try {
+        const res = await fetch(ENDPOINT + "?action=extract&url=" + encodeURIComponent(url));
+        const data = await res.json();
+        if (data.ok) {
+          if (data.eventDate) document.getElementById("eventDate").value = data.eventDate;
+          if (data.eventTime) document.getElementById("eventTime").value = data.eventTime;
+          if (data.venue) document.querySelector("input[name=venue]").value = data.venue;
+          document.getElementById("extractMsg").textContent = "정보가 채워졌습니다.";
+        } else {
+          document.getElementById("extractMsg").textContent = "추출 실패: " + data.error;
+        }
+      } catch (err) {
+        document.getElementById("extractMsg").textContent = "네트워크 오류: " + err.message;
+      }
+    });
+
+    // 제출
     document.getElementById('form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const f = e.target;
-
       const date = document.getElementById('eventDate').value;
       const time = document.getElementById('eventTime').value;
       const eventDateTime = (date && time) ? `${date}T${time}` : '';
-
       const formData = new FormData(f);
       const payload = Object.fromEntries(formData.entries());
       payload.eventType = '경사';
       payload.eventDateTime = eventDateTime;
       payload.consent = true;
-
-      if (payload.order === '기타') {
-        payload.order = payload.orderEtc;
-      }
+      if (payload.order === '기타') payload.order = payload.orderEtc;
 
       const msg = document.getElementById('msg');
       msg.textContent = '전송 중...'; msg.className = '';
 
       try {
         const res = await fetch(ENDPOINT, { 
-          method: 'POST', 
+          method: 'POST',
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload) 
+          body: JSON.stringify(payload)
         });
         const data = await res.json();
-
         if (data.ok) {
           msg.textContent = '제출 완료되었습니다. 담당자가 확인 후 연락 드리겠습니다.';
           msg.className = 'success';
-
           if (data.preview) {
             document.getElementById('previewBox').classList.remove('hidden');
             document.getElementById('previewText').textContent = data.preview;
           }
-
           f.reset();
           orderEtc.classList.add('hidden');
         } else {
