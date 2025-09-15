@@ -9,8 +9,7 @@ body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;pad
 .card{max-width:720px;margin:0 auto;background:#fff;padding:24px;border-radius:16px;box-shadow:0 2px 6px rgba(0,0,0,0.1)}
 h2{margin-top:0}
 label{display:block;margin:12px 0 6px;font-weight:600}
-input,select,textarea{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box}
-textarea{min-height:60px}
+input,select{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box}
 .row{display:flex;gap:8px}
 .btn{padding:12px 16px;border:0;border-radius:8px;cursor:pointer;font-weight:600}
 .btn.primary{background:#111;color:#fff;width:100%;margin-top:16px}
@@ -27,18 +26,16 @@ textarea{min-height:60px}
 
   <!-- Step 1: 모바일 청첩장 -->
   <div class="section">
-    <label>Step 1. 모바일 청첩장 URL *</label>
+    <label>모바일 청첩장 URL *</label>
     <div class="row">
       <input id="inviteUrl" placeholder="https://..." required />
       <button class="btn secondary" id="btnExtract" type="button">정보 가져오기</button>
     </div>
-    <label style="margin-top:8px">
-      <input type="checkbox" id="noInvite" /> 모바일 청첩장이 없어요 (직접 입력)
-    </label>
+    <p class="hint">※ 모바일 청첩장이 없으면 직접 입력해 주세요.</p>
   </div>
 
-  <!-- Step 2: 수기 입력 -->
-  <div class="section hidden" id="manualWrap">
+  <!-- Step 2: 입력창 (AI 결과 자동 채움) -->
+  <div class="section">
     <label>신랑측 *</label>
     <input id="groomInfo" placeholder="예: 서광훈 ∙ 정현순 의 아들 현종" />
 
@@ -79,56 +76,58 @@ textarea{min-height:60px}
 // 🚩 Apps Script URL
 const ENDPOINT="https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec";
 
-// 없음 체크 → URL 비활성화 + 수기 입력 보이기
-document.getElementById('noInvite').addEventListener('change', e=>{
-  const noInvite=e.target.checked;
-  document.getElementById('inviteUrl').disabled=noInvite;
-  document.getElementById('manualWrap').classList.toggle('hidden',!noInvite);
-  if(noInvite){ document.getElementById('inviteUrl').value="없음"; }
-  else{ document.getElementById('inviteUrl').value=""; }
-});
-
-// 정보 가져오기 (AI)
+// AI 정보 가져오기
 document.getElementById('btnExtract').addEventListener('click',async()=>{
   const url=document.getElementById('inviteUrl').value.trim();
-  if(!url||url==="없음"){ alert("URL을 입력하세요."); return; }
+  if(!url){ alert("URL을 입력하세요."); return; }
 
   try{
     const res=await fetch(ENDPOINT+'?action=extract&url='+encodeURIComponent(url));
     const text=await res.text();
     const data=JSON.parse(text);
-    if(data.ok&&data.boardText){
-      alert("청첩장 정보 추출 완료!");
-      localStorage.setItem('inviteExtract',JSON.stringify(data));
-      document.getElementById('previewBox').textContent=data.boardText;
-      document.getElementById('previewBox').classList.remove('hidden');
+
+    if(data.ok){
+      // 입력칸 자동 채움
+      document.getElementById('groomInfo').value=`${data.groomFather||''} ∙ ${data.groomMother||''} 의 ${data.groomorder||''} ${data.groomName||''}`;
+      document.getElementById('brideInfo').value=`${data.brideFather||''} ∙ ${data.brideMother||''} 의 ${data.brideorder||''} ${data.brideName||''}`;
+      document.getElementById('eventDate').value=data.eventDate||'';
+      document.getElementById('eventTime').value=data.eventTime||'';
+      document.getElementById('venue').value=data.venue||'';
+      document.getElementById('venueAddr').value=data.venueAddr||'';
+      alert("청첩장 정보가 자동으로 채워졌습니다. 필요한 경우 수정하세요.");
     }else{
-      alert("자동 추출 실패: 수기 입력을 이용하세요.");
+      alert("추출 실패: 수기로 입력해 주세요.");
     }
-  }catch(err){ alert("네트워크 오류: "+err.message); }
+  }catch(err){
+    alert("네트워크 오류: "+err.message);
+  }
 });
 
-// 미리보기 (수기 입력 모드)
+// 미리보기
 document.getElementById('btnPreview').addEventListener('click',()=>{
-  const groom=document.getElementById('groomInfo').value;
-  const bride=document.getElementById('brideInfo').value;
+  const groom=document.getElementById('groomInfo').value.trim();
+  const bride=document.getElementById('brideInfo').value.trim();
   const date=document.getElementById('eventDate').value;
   const time=document.getElementById('eventTime').value;
-  const venue=document.getElementById('venue').value;
-  const addr=document.getElementById('venueAddr').value;
+  const venue=document.getElementById('venue').value.trim();
+  const addr=document.getElementById('venueAddr').value.trim();
   const small=document.getElementById('isSmallWedding').value;
+
+  if(!groom||!bride||!date||!time||!venue||!addr){
+    alert("모든 필수 항목을 입력하세요."); return;
+  }
 
   const preview=`${groom}
 ${bride}
 □ 일 시 : ${date} ${time}
 □ 장 소 : ${venue}
            (${addr})
-□ 스몰웨딩 여부 : ${small}`;
+□ 스몰웨딩 여부 : ${small||"선택안함"}`;
 
   document.getElementById('previewBox').textContent=preview;
   document.getElementById('previewBox').classList.remove('hidden');
 
-  // 저장
+  // wedding.html에 넘길 데이터 저장
   localStorage.setItem('inviteExtract',JSON.stringify({
     groomInfo:groom, brideInfo:bride,
     eventDate:date, eventTime:time,
@@ -139,9 +138,6 @@ ${bride}
 
 // 다음 단계
 document.getElementById('goWedding').addEventListener('click',()=>{
-  if(!document.getElementById('inviteUrl').value){
-    alert("URL은 필수 입력입니다. (없음일 경우 '없음' 저장됨)"); return;
-  }
   location.href='wedding.html';
 });
 </script>
