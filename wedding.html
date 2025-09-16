@@ -177,8 +177,39 @@ document.getElementById('btnCheckUrl').addEventListener('click', async ()=>{
   }
 });
 
-// 🟢 다음 단계 저장
+// 🟢 다음 단계 저장 (필수 검증 추가)
 document.getElementById('btnNext').addEventListener('click',()=>{
+  const requiredFields = [
+    {id:'inviteUrl', label:'청첩장 URL', skipIfNoInvite:true},
+    {id:'groomFather', label:'신랑 혼주 아버지'},
+    {id:'groomMother', label:'신랑 혼주 어머니'},
+    {id:'groomOrder', label:'신랑 형제관계'},
+    {id:'groomName', label:'신랑 성명'},
+    {id:'brideFather', label:'신부 혼주 아버지'},
+    {id:'brideMother', label:'신부 혼주 어머니'},
+    {id:'brideOrder', label:'신부 형제관계'},
+    {id:'brideName', label:'신부 성명'},
+    {id:'eventDate', label:'예식일'},
+    {id:'eventTime', label:'예식시간'},
+    {id:'venueAddr', label:'예식장 주소'},
+    {id:'venueDetail', label:'예식장 세부'},
+    {id:'isSmallWedding', label:'스몰웨딩 여부'},
+    {id:'flowerOption', label:'화환 수령'}
+  ];
+
+  for(const f of requiredFields){
+    const val=document.getElementById(f.id).value.trim();
+    if(f.skipIfNoInvite && document.getElementById('noInvite').checked){
+      continue; // 청첩장 없음 체크 시 URL 무시
+    }
+    if(!val){
+      alert(`${f.label} 항목을 입력/선택해 주세요.`);
+      document.getElementById(f.id).focus();
+      return;
+    }
+  }
+
+  // ✅ 저장
   const info={
     inviteUrl:document.getElementById('inviteUrl').value,
     noInvite:document.getElementById('noInvite').checked,
