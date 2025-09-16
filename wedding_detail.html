@@ -1,42 +1,71 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>추가 정보 입력</title>
 <style>
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:24px;background:#f9f9f9;color:#111}
-.card{max-width:720px;margin:0 auto;background:#fff;padding:24px;border-radius:16px;box-shadow:0 2px 6px rgba(0,0,0,0.1)}
-h2{margin-top:0}
-label{display:block;margin:12px 0 6px;font-weight:600}
-input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box}
-.btn{padding:12px 16px;border:0;border-radius:8px;cursor:pointer;font-weight:600}
-.btn.primary{background:#111;color:#fff;width:100%;margin-top:16px}
-.preview{white-space:pre-wrap;border:1px solid #ddd;padding:16px;border-radius:12px;background:#fafafa;margin-top:16px}
+body{
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  margin:0;padding:16px;background:#f9f9f9;color:#111
+}
+.card{
+  max-width:420px;
+  margin:0 auto;background:#fff;padding:16px;
+  border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,0.1)
+}
+h2{margin-top:0;font-size:18px}
+h3{margin:12px 0;font-size:16px}
+.row-inline{
+  display:flex;align-items:center;gap:6px;margin:8px 0;
+  flex-wrap:wrap;
+}
+.row-inline label{
+  flex:0 0 120px;font-size:14px;font-weight:600
+}
+.row-inline input,.row-inline select{
+  flex:1;min-width:0;
+  padding:8px;font-size:14px;
+  border:1px solid #ccc;border-radius:6px
+}
+.btn{
+  padding:10px 12px;border:0;border-radius:6px;
+  cursor:pointer;font-weight:600;font-size:14px
+}
+.btn.primary{background:#111;color:#fff;width:100%;margin-top:12px}
+.preview{white-space:pre-wrap;border:1px solid #ddd;padding:12px;border-radius:12px;background:#fafafa;margin-top:12px;font-size:14px}
 .hidden{display:none}
+.note{font-size:12px;color:#666;margin-top:2px}
 </style>
 </head>
 <body>
 <div class="card">
   <h2>추가 정보 입력</h2>
 
-  <label>임원 성함 *</label>
-  <input id="name" />
-  <label>재직/퇴직 *</label>
-  <select id="empStatus"><option value="">선택</option><option>재직</option><option>퇴직</option></select>
-  <label>근무 부서 *</label>
-  <input id="deptWhenEmployed" />
-  <label>현 직장/직책 *</label>
-  <input id="currentJobTitle" />
-  <label>청탁금지법 대상 여부 *</label>
-  <select id="antiGraft"><option value="">선택</option><option>대상</option><option>비대상</option></select>
-  <label>축의계좌 *</label>
-  <input id="bankNumber" />
-  <label>은행 *</label>
-  <select id="bankName"><option value="">선택</option><option>국민</option><option>신한</option><option>우리</option><option>하나</option><option>농협</option><option>기업</option></select>
-  <label>연락처 *</label>
-  <input id="phone" placeholder="010-1234-5678" />
-  <label>퇴임임원 문자 알림 계좌번호 공개 여부 *</label>
-  <select id="accountDisclosure"><option value="">선택</option><option>희망</option><option>비희망</option></select>
+  <div class="row-inline"><label>임원 성함 *</label><input id="name" /></div>
+  <div class="row-inline">
+    <label>재직/퇴직 *</label>
+    <select id="empStatus"><option value="">선택</option><option>재직</option><option>퇴직</option></select>
+  </div>
+  <div class="row-inline"><label>근무 부서 *</label><input id="deptWhenEmployed" /></div>
+  <div class="row-inline"><label>현 직장/직책 *</label><input id="currentJobTitle" /></div>
+  <div class="row-inline">
+    <label>청탁금지법 *</label>
+    <select id="antiGraft"><option value="">선택</option><option>대상</option><option>비대상</option></select>
+  </div>
+  <div class="row-inline"><label>축의계좌 *</label><input id="bankNumber" /></div>
+  <div class="row-inline">
+    <label>은행 *</label>
+    <select id="bankName">
+      <option value="">선택</option><option>국민</option><option>신한</option><option>우리</option>
+      <option>하나</option><option>농협</option><option>기업</option>
+    </select>
+  </div>
+  <div class="row-inline"><label>연락처 *</label><input id="phone" placeholder="010-1234-5678" /></div>
+  <div class="row-inline">
+    <label>계좌공개 *</label>
+    <select id="accountDisclosure"><option value="">선택</option><option>희망</option><option>비희망</option></select>
+  </div>
 
   <button class="btn primary" id="btnPreview">게시글 미리보기</button>
   <div id="previewBox" class="preview hidden"></div>
@@ -46,7 +75,18 @@ input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;box
 <script>
 const invite=JSON.parse(localStorage.getItem('inviteInfo')||'{}');
 
-// 미리보기
+// 🟢 전화번호 자동 하이픈
+document.getElementById('phone').addEventListener('input',(e)=>{
+  let num=e.target.value.replace(/\D/g,"");
+  if(num.length===10){
+    num=num.replace(/(\d{2,3})(\d{3,4})(\d{4})/,"$1-$2-$3");
+  }else if(num.length===11){
+    num=num.replace(/(\d{3})(\d{4})(\d{4})/,"$1-$2-$3");
+  }
+  e.target.value=num;
+});
+
+// 🟢 미리보기
 document.getElementById('btnPreview').addEventListener('click',()=>{
   const name=document.getElementById('name').value;
   const job=document.getElementById('currentJobTitle').value;
@@ -57,19 +97,39 @@ document.getElementById('btnPreview').addEventListener('click',()=>{
   const preview=`${invite.groomFather} ∙ ${invite.groomMother} 의 ${invite.groomOrder} ${invite.groomName}
 ${invite.brideFather} ∙ ${invite.brideMother} 의 ${invite.brideOrder} ${invite.brideName}
 □ 일 시 : ${invite.eventDate} ${invite.eventTime}
-□ 장 소 : ${invite.venue}
-           (${invite.venueAddr})
+□ 장 소 : ${invite.venueAddr} ${invite.venueDetail}
 □ 연락처 : ${phone} (${name} ${job})
 □ 축의계좌 : ${bank} ${bankNum} (${name})
 □ 스몰웨딩 여부 : ${invite.isSmallWedding}
+□ 화환 수령 : ${invite.flowerOption}
 □ 청첩장 URL : ${invite.noInvite?"없음":invite.inviteUrl}`;
 
   document.getElementById('previewBox').textContent=preview;
   document.getElementById('previewBox').classList.remove('hidden');
 });
 
-// 제출
+// 🟢 제출
 document.getElementById('btnSubmit').addEventListener('click',async()=>{
+  const required=[
+    {id:'name',label:'임원 성함'},
+    {id:'empStatus',label:'재직/퇴직'},
+    {id:'deptWhenEmployed',label:'근무 부서'},
+    {id:'currentJobTitle',label:'현 직장/직책'},
+    {id:'antiGraft',label:'청탁금지법'},
+    {id:'bankNumber',label:'축의계좌'},
+    {id:'bankName',label:'은행'},
+    {id:'phone',label:'연락처'},
+    {id:'accountDisclosure',label:'계좌공개'}
+  ];
+  for(const f of required){
+    const val=document.getElementById(f.id).value.trim();
+    if(!val){
+      alert(`${f.label} 항목을 입력/선택해 주세요.`);
+      document.getElementById(f.id).focus();
+      return;
+    }
+  }
+
   const payload={
     ...invite,
     name:document.getElementById('name').value,
@@ -87,9 +147,13 @@ document.getElementById('btnSubmit').addEventListener('click',async()=>{
   try{
     const res=await fetch(ENDPOINT,{method:"POST",body:JSON.stringify(payload)});
     const result=await res.json();
-    alert(result.ok?"제출 완료!":"제출 실패: "+result.error);
+    if(result.ok){
+      alert("제출이 완료되었습니다 ✅");
+    }else{
+      alert("제출 실패: "+(result.error||"알 수 없는 오류"));
+    }
   }catch(err){
-    alert("제출 오류: "+err.message);
+    alert("오류: "+err.message);
   }
 });
 </script>
