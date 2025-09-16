@@ -1,4 +1,4 @@
-<!doctype html>
+<!doctype html> 
 <html lang="ko">
 <head>
 <meta charset="utf-8">
@@ -34,6 +34,17 @@ h2{margin-top:0;font-size:18px}
 .btn.primary{background:#111;color:#fff;width:100%;margin-top:12px}
 .preview{white-space:pre-wrap;border:1px solid #ddd;padding:12px;border-radius:12px;background:#fafafa;margin-top:12px;font-size:14px}
 .hidden{display:none}
+#submitMessage{
+  margin-top:12px;
+  padding:10px;
+  font-size:13px;
+  color:#0a6d0a;
+  background:#e9f8e9;
+  border:1px solid #b5e0b5;
+  border-radius:8px;
+  line-height:1.5;
+  display:none;
+}
 </style>
 </head>
 <body>
@@ -75,12 +86,13 @@ h2{margin-top:0;font-size:18px}
   <button class="btn primary" id="btnPreview">게시글 미리보기</button>
   <div id="previewBox" class="preview hidden"></div>
   <button class="btn primary" id="btnSubmit">제출</button>
+  <div id="submitMessage"></div> <!-- ✅ 제출 완료 메시지 표시 영역 -->
 </div>
 
 <script>
 const invite=JSON.parse(localStorage.getItem('inviteInfo')||'{}');
 
-// 🟢 전화번호 자동 하이픈 (연락처 input)
+// 전화번호 자동 하이픈
 document.getElementById('phone').addEventListener('input',(e)=>{
   let num=e.target.value.replace(/\D/g,"");
   if(num.length===10){
@@ -91,110 +103,58 @@ document.getElementById('phone').addEventListener('input',(e)=>{
   e.target.value=num;
 });
 
-// 🟢 예식장 주소 내 전화번호 자동 하이픈
-function formatVenueAddr(rawAddr){
-  const telMatch=rawAddr.match(/(\d{2,4})[- ]?(\d{3,4})[- ]?(\d{4})/);
-  if(telMatch){
-    const tel=telMatch[1]+"-"+telMatch[2]+"-"+telMatch[3];
-    return rawAddr.replace(telMatch[0],tel);
-  }
-  return rawAddr;
-}
+// 제출 이벤트
+document.getElementById('btnSubmit').addEventListener('click', async () => {
+  const payload = {
+    ...invite,
+    name: document.getElementById('name').value,
+    parentSide: document.querySelector('input[name="parentSide"]:checked')?.value,
+    empStatus: document.getElementById('empStatus').value,
+    deptWhenEmployed: document.getElementById('deptWhenEmployed').value,
+    currentJobTitle: document.getElementById('currentJobTitle').value,
+    antiGraft: document.getElementById('antiGraft').value,
+    bankNumber: document.getElementById('bankNumber').value,
+    bankName: document.getElementById('bankName').value,
+    phone: document.getElementById('phone').value,
+    accountDisclosure: document.getElementById('accountDisclosure').value
+  };
 
-// 🟢 성 추출/자녀 이름 보정
-const compoundSurnames=["남궁","황보","제갈","사공","선우","서문","독고","동방"];
-
-function extractSurname(fatherName){
-  if(!fatherName) return "";
-  const firstTwo=fatherName.slice(0,2);
-  if(compoundSurnames.includes(firstTwo)) return firstTwo;
-  return fatherName[0];
-}
-
-function getChildName(fatherName, childName){
-  if(!childName) return "";
-  const surname=extractSurname(fatherName);
-  if(surname && childName.startsWith(surname)){
-    return childName.slice(surname.length); // 성 제거
-  }
-  return childName; // 성 없음 → 그대로
-}
-
-function formatDateTime(dateStr, timeStr){
-  try{
-    const days=["일요일","월요일","화요일","수요일","목요일","금요일","토요일"];
-    const d=new Date(`${dateStr}T${timeStr}`);
-    const y=d.getFullYear(), m=d.getMonth()+1, day=d.getDate(), dow=days[d.getDay()];
-    let hour=d.getHours(), min=("0"+d.getMinutes()).slice(-2);
-    const ampm=hour<12?"오전":"오후";
-    if(hour===0) hour=12;
-    else if(hour>12) hour-=12;
-    return `${y}년 ${m}월 ${day}일 ${dow} ${ampm} ${hour}시 ${min}분`;
-  }catch{ return dateStr+" "+timeStr; }
-}
-
-// 🟢 미리보기
-document.getElementById('btnPreview').addEventListener('click',()=>{
-  const side=document.querySelector('input[name="parentSide"]:checked')?.value;
-  const empStatus=document.getElementById('empStatus').value;
-  const dept=document.getElementById('deptWhenEmployed').value;
-  const name=document.getElementById('name').value;
-  const job=document.getElementById('currentJobTitle').value;
-  const phone=document.getElementById('phone').value;
-  const bank=document.getElementById('bankName').value;
-  const bankNum=document.getElementById('bankNumber').value;
-  const anti=document.getElementById('antiGraft').value;
-
-  // 임원 header
-  let header="";
-  if(empStatus==="재직"){
-    header=`<div style="font-size:14pt"><b>삼성전자 ${dept} ${name} ${job} ${side==="groom"?invite.groomOrder:invite.brideOrder}결혼</b>을 안내하오니<br>많은 축하 부탁드립니다.</div><br>`;
-  }else{
-    header=`<div style="font-size:14pt"><b>전)삼성전자 ${dept} ${name} ${job} ${side==="groom"?invite.groomOrder:invite.brideOrder}결혼</b>을 안내하오니<br>많은 축하 부탁드립니다.</div><br>`;
+  // 필수값 검증
+  if (!payload.name || !payload.parentSide || !payload.empStatus || 
+      !payload.deptWhenEmployed || !payload.currentJobTitle || 
+      !payload.antiGraft || !payload.bankNumber || !payload.bankName || 
+      !payload.phone || !payload.accountDisclosure) {
+    alert("필수 입력값을 모두 채워주세요.");
+    return;
   }
 
-  // 혼주 block (성이 있을 경우에만 제거)
-  let familyBlock="";
-  if(side==="groom"){
-    familyBlock=`<div style="font-size:16pt;font-weight:bold">`+
-      `${invite.groomFather} · ${invite.groomMother} 의 ${invite.groomOrder} ${getChildName(invite.groomFather, invite.groomName)}</div>`+
-      `<div style="font-size:16pt">`+
-      `${invite.brideFather} · ${invite.brideMother} 의 ${invite.brideOrder} ${getChildName(invite.brideFather, invite.brideName)}</div><br>`;
-  }else{
-    familyBlock=`<div style="font-size:16pt;font-weight:bold">`+
-      `${invite.brideFather} · ${invite.brideMother} 의 ${invite.brideOrder} ${getChildName(invite.brideFather, invite.brideName)}</div>`+
-      `<div style="font-size:16pt">`+
-      `${invite.groomFather} · ${invite.groomMother} 의 ${invite.groomOrder} ${getChildName(invite.groomFather, invite.groomName)}</div><br>`;
+  const ENDPOINT="https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec";
+
+  try {
+    const res = await fetch(ENDPOINT, {
+      method:"POST",
+      body: JSON.stringify(payload),
+      headers: { "Content-Type":"application/json" }
+    });
+    const data = await res.json();
+    const msgBox=document.getElementById("submitMessage");
+    if (data.ok) {
+      msgBox.innerHTML=`신청이 완료되었습니다.<br>
+      예식일 기준 2~3주 이내 게시 예정이며,<br>
+      신속 게시를 원하실 경우 경조사 담당자에게 문의해 주시기 바랍니다.<br>
+      ※ 추가 확인 사항은 담당자가 개별 연락드립니다. (카카오톡 채널 확인 가능)`;
+      msgBox.style.display="block";
+    } else {
+      msgBox.innerHTML="❌ 제출 실패: "+(data.error || "알 수 없는 오류");
+      msgBox.style.color="red";
+      msgBox.style.display="block";
+    }
+  } catch (err) {
+    const msgBox=document.getElementById("submitMessage");
+    msgBox.innerHTML="❌ 제출 중 오류 발생: "+err.message;
+    msgBox.style.color="red";
+    msgBox.style.display="block";
   }
-
-  // 일정 및 주소
-  let schedule=`<div style="font-size:12pt">`+
-    `□ 일 시 : ${formatDateTime(invite.eventDate,invite.eventTime)}<br>`+
-    `□ 장 소 : ${invite.venueDetail}<br>`+
-    `&nbsp;&nbsp;&nbsp;&nbsp;(${formatVenueAddr(invite.venueAddr)})<br>`+
-    `□ 연락처 : ${phone} (${name} ${job})<br>`+
-    `□ 축의금 전달계좌 : ${bank}은행 ${bankNum} (${name})</div><br>`;
-
-  // 스몰웨딩 여부
-  let smallWedding="";
-  if(invite.isSmallWedding==="예"){
-    smallWedding=`<div style="font-size:12pt">※ 작은 결혼식인 관계로 가족 및 친지를 초청하여 진행하오니 양해바랍니다.</div>`;
-  }
-
-  // 청탁금지법
-  let graftNote="";
-  if(anti==="대상"){
-    graftNote=`<div style="font-size:12pt">※ 청탁금지법 대상</div>`;
-  }else if(anti==="비대상"){
-    graftNote=`<div style="font-size:12pt">※ 청탁금지법 비대상</div>`;
-  }
-
-  const preview=
-    `<div style="font-family:Batang;line-height:1.6">`+
-    `${header}${familyBlock}${schedule}${smallWedding}${graftNote}</div>`;
-
-  document.getElementById('previewBox').innerHTML=preview;
-  document.getElementById('previewBox').classList.remove('hidden');
 });
 </script>
 </body>
