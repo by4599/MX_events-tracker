@@ -1,109 +1,187 @@
-<!doctype html> 
+<!doctype html>
 <html lang="ko">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>추가 정보 입력</title>
 <style>
-body{
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  margin:0;padding:16px;background:#f9f9f9;color:#111
+body {
+  font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  margin: 0; padding: 16px; background: #f9f9f9;
 }
-.card{
-  max-width:420px;
-  margin:0 auto;background:#fff;padding:16px;
-  border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,0.1)
+.card {
+  max-width: 420px; margin: 0 auto; background: #fff;
+  padding: 16px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
-h2{margin-top:0;font-size:18px}
-.row-inline{
-  display:flex;align-items:center;gap:6px;margin:8px 0;
-  flex-wrap:wrap;
+h2 { margin: 0 0 12px; font-size: 18px }
+.row {
+  display: flex; align-items: center; gap: 6px; margin: 8px 0; flex-wrap: wrap;
 }
-.row-inline label{
-  flex:0 0 120px;font-size:14px;font-weight:600
+.row label {
+  flex: 0 0 120px; font-size: 14px; font-weight: 600;
 }
-.row-inline input,.row-inline select{
-  flex:1;min-width:0;
-  padding:8px;font-size:14px;
-  border:1px solid #ccc;border-radius:6px
+.row input, .row select {
+  flex: 1; min-width: 0; padding: 8px; font-size: 14px;
+  border: 1px solid #ccc; border-radius: 6px;
 }
-.btn{
-  padding:10px 12px;border:0;border-radius:6px;
-  cursor:pointer;font-weight:600;font-size:14px
+.btn {
+  padding: 10px; border: 0; border-radius: 6px; cursor: pointer;
+  font-weight: 600; font-size: 14px; margin-top: 10px;
 }
-.btn.primary{background:#111;color:#fff;width:100%;margin-top:12px}
-.preview{white-space:pre-wrap;border:1px solid #ddd;padding:12px;border-radius:12px;background:#fafafa;margin-top:12px;font-size:14px}
-.hidden{display:none}
-#submitMessage{
-  margin-top:12px;
-  padding:10px;
-  font-size:13px;
-  color:#0a6d0a;
-  background:#e9f8e9;
-  border:1px solid #b5e0b5;
-  border-radius:8px;
-  line-height:1.5;
-  display:none;
+.btn.primary { background: #111; color: #fff; width: 100% }
+.preview {
+  white-space: pre-wrap; border: 1px solid #ddd; padding: 12px;
+  border-radius: 12px; background: #fafafa; margin-top: 12px; font-size: 14px;
 }
+.msg { margin-top: 10px; display: none }
 </style>
 </head>
 <body>
 <div class="card">
   <h2>추가 정보 입력</h2>
 
-  <div class="row-inline"><label>임원 성함 *</label><input id="name" /></div>
-  <div class="row-inline">
+  <div class="row">
+    <label>임원 성함 *</label>
+    <input id="name">
+  </div>
+
+  <div class="row">
     <label>임원측 *</label>
     <div>
       <label><input type="radio" name="parentSide" value="groom"> 신랑측</label>
       <label><input type="radio" name="parentSide" value="bride"> 신부측</label>
     </div>
   </div>
-  <div class="row-inline">
-    <label>재직/퇴직 *</label>
-    <select id="empStatus"><option value="">선택</option><option>재직</option><option>퇴임</option></select>
+
+  <div class="row">
+    <label>재직/퇴임 *</label>
+    <select id="empStatus">
+      <option value="">선택</option>
+      <option>재직</option>
+      <option>퇴임</option>
+    </select>
   </div>
-  <div class="row-inline"><label>근무 부서 *</label><input id="deptWhenEmployed" /></div>
-  <div class="row-inline"><label>직책 *</label><input id="currentJobTitle" /></div>
-  <div class="row-inline">
+
+  <div class="row">
+    <label>근무 부서 *</label>
+    <input id="deptWhenEmployed">
+  </div>
+
+  <div class="row">
+    <label>직책 *</label>
+    <input id="currentJobTitle">
+  </div>
+
+  <div class="row">
     <label>청탁금지법 *</label>
-    <select id="antiGraft"><option value="">선택</option><option>대상</option><option>비대상</option></select>
+    <select id="antiGraft">
+      <option value="">선택</option>
+      <option>대상</option>
+      <option>비대상</option>
+    </select>
   </div>
-  <div class="row-inline"><label>축의계좌 *</label><input id="bankNumber" /></div>
-  <div class="row-inline">
+
+  <div class="row">
+    <label>축의계좌 *</label>
+    <input id="bankNumber">
+  </div>
+
+  <div class="row">
     <label>은행 *</label>
     <select id="bankName">
-      <option value="">선택</option><option>국민</option><option>신한</option><option>우리</option>
+      <option value="">선택</option>
+      <option>국민</option><option>신한</option><option>우리</option>
       <option>하나</option><option>농협</option><option>기업</option>
     </select>
   </div>
-  <div class="row-inline"><label>연락처 *</label><input id="phone" placeholder="010-1234-5678" /></div>
-  <div class="row-inline">
-    <label>계좌공개 *</label>
-    <select id="accountDisclosure"><option value="">선택</option><option>희망</option><option>비희망</option></select>
+
+  <div class="row">
+    <label>연락처 *</label>
+    <input id="phone" placeholder="010-1234-5678">
   </div>
 
-  <button class="btn primary" id="btnPreview">게시글 미리보기</button>
+  <div class="row">
+    <label>계좌공개 *</label>
+    <select id="accountDisclosure">
+      <option value="">선택</option>
+      <option>희망</option>
+      <option>비희망</option>
+    </select>
+  </div>
+
+  <button class="btn primary" id="btnPreview">미리보기</button>
   <div id="previewBox" class="preview hidden"></div>
+
   <button class="btn primary" id="btnSubmit">제출</button>
-  <div id="submitMessage"></div> <!-- ✅ 제출 완료 메시지 표시 영역 -->
+  <div id="submitMessage" class="msg"></div>
 </div>
 
 <script>
-const invite=JSON.parse(localStorage.getItem('inviteInfo')||'{}');
+const invite = JSON.parse(localStorage.getItem('inviteInfo') || '{}');
+const phone = document.getElementById('phone');
 
 // 전화번호 자동 하이픈
-document.getElementById('phone').addEventListener('input',(e)=>{
-  let num=e.target.value.replace(/\D/g,"");
-  if(num.length===10){
-    num=num.replace(/(\d{2,3})(\d{3,4})(\d{4})/,"$1-$2-$3");
-  }else if(num.length===11){
-    num=num.replace(/(\d{3})(\d{4})(\d{4})/,"$1-$2-$3");
-  }
-  e.target.value=num;
+phone.addEventListener('input', e => {
+  let v = e.target.value.replace(/\D/g, "");
+  if (v.length === 10) v = v.replace(/(\d{2,3})(\d{3,4})(\d{4})/, "$1-$2-$3");
+  else if (v.length === 11) v = v.replace(/(\d{3})(\d{4})(\d{4})/, "$1-$2-$3");
+  e.target.value = v;
 });
 
-// 제출 이벤트
+function formatDateTime(d, t) {
+  try {
+    const w = ["일", "월", "화", "수", "목", "금", "토"];
+    const dd = new Date(`${d}T${t}`);
+    let h = dd.getHours(), m = ("0" + dd.getMinutes()).slice(-2);
+    const ap = h < 12 ? "오전" : "오후";
+    if (h === 0) h = 12; else if (h > 12) h -= 12;
+    return `${dd.getFullYear()}년 ${dd.getMonth()+1}월 ${dd.getDate()}일 ${w[dd.getDay()]}요일 ${ap} ${h}시 ${m}분`;
+  } catch { return d + " " + t }
+}
+
+// 미리보기
+document.getElementById('btnPreview').addEventListener('click', () => {
+  const side = document.querySelector('input[name="parentSide"]:checked')?.value;
+  const emp = document.getElementById('empStatus').value;
+  const dept = document.getElementById('deptWhenEmployed').value;
+  const nm = document.getElementById('name').value;
+  const job = document.getElementById('currentJobTitle').value;
+  const ph = phone.value;
+  const bank = document.getElementById('bankName').value;
+  const bankNum = document.getElementById('bankNumber').value;
+  const anti = document.getElementById('antiGraft').value;
+
+  let header = emp === "재직"
+    ? `<div style="font-size:14pt"><b>삼성전자 ${dept} ${nm} ${job} ${side==="groom"?invite.groomOrder:invite.brideOrder}결혼</b>을 안내하오니<br>많은 축하 부탁드립니다.</div><br>`
+    : `<div style="font-size:14pt"><b>전)삼성전자 ${dept} ${nm} ${job} ${side==="groom"?invite.groomOrder:invite.brideOrder}결혼</b>을 안내하오니<br>많은 축하 부탁드립니다.</div><br>`;
+
+  let family = side === "groom"
+    ? `<div style="font-size:16pt;font-weight:bold">${invite.groomFather} · ${invite.groomMother} 의 ${invite.groomOrder} ${invite.groomName}</div>
+       <div style="font-size:16pt">${invite.brideFather} · ${invite.brideMother} 의 ${invite.brideOrder} ${invite.brideName}</div><br>`
+    : `<div style="font-size:16pt;font-weight:bold">${invite.brideFather} · ${invite.brideMother} 의 ${invite.brideOrder} ${invite.brideName}</div>
+       <div style="font-size:16pt">${invite.groomFather} · ${invite.groomMother} 의 ${invite.groomOrder} ${invite.groomName}</div><br>`;
+
+  let schedule =
+    `<div style="font-size:12pt">□ 일 시 : ${formatDateTime(invite.eventDate,invite.eventTime)}<br>
+     □ 장 소 : ${invite.venueDetail}<br>
+     &nbsp;&nbsp;&nbsp;&nbsp;(${invite.venueAddr})<br>
+     □ 연락처 : ${ph} (${nm} ${job})<br>
+     □ 축의금 전달계좌 : ${bank} ${bankNum} (${nm})</div><br>`;
+
+  let sw = invite.isSmallWedding==="예"
+    ? `<div style="font-size:12pt">※ 작은 결혼식인 관계로 가족 및 친지를 초청하여 진행하오니 양해바랍니다.</div>` : "";
+
+  let graft = anti==="대상"
+    ? `<div style="font-size:12pt">※ 청탁금지법 대상</div>`
+    : anti==="비대상"
+      ? `<div style="font-size:12pt">※ 청탁금지법 비대상</div>` : "";
+
+  document.getElementById('previewBox').innerHTML =
+    `<div style="font-family:Batang;line-height:1.6">${header}${family}${schedule}${sw}${graft}</div>`;
+  document.getElementById('previewBox').classList.remove('hidden');
+});
+
+// 제출
 document.getElementById('btnSubmit').addEventListener('click', async () => {
   const payload = {
     ...invite,
@@ -115,46 +193,32 @@ document.getElementById('btnSubmit').addEventListener('click', async () => {
     antiGraft: document.getElementById('antiGraft').value,
     bankNumber: document.getElementById('bankNumber').value,
     bankName: document.getElementById('bankName').value,
-    phone: document.getElementById('phone').value,
+    phone: phone.value,
     accountDisclosure: document.getElementById('accountDisclosure').value
   };
 
-  // 필수값 검증
-  if (!payload.name || !payload.parentSide || !payload.empStatus || 
-      !payload.deptWhenEmployed || !payload.currentJobTitle || 
-      !payload.antiGraft || !payload.bankNumber || !payload.bankName || 
-      !payload.phone || !payload.accountDisclosure) {
-    alert("필수 입력값을 모두 채워주세요.");
-    return;
-  }
-
-  const ENDPOINT="https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec";
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec";
+  const msg = document.getElementById("submitMessage");
 
   try {
     const res = await fetch(ENDPOINT, {
       method:"POST",
       body: JSON.stringify(payload),
-      headers: { "Content-Type":"application/json" }
+      headers: {"Content-Type":"application/json"}
     });
     const data = await res.json();
-    const msgBox=document.getElementById("submitMessage");
     if (data.ok) {
-      msgBox.innerHTML=`신청이 완료되었습니다.<br>
-      예식일 기준 2~3주 이내 게시 예정이며,<br>
-      신속 게시를 원하실 경우 경조사 담당자에게 문의해 주시기 바랍니다.<br>
-      ※ 추가 확인 사항은 담당자가 개별 연락드립니다. (카카오톡 채널 확인 가능)`;
-      msgBox.style.display="block";
+      msg.innerHTML = "신청이 완료되었습니다.<br>예식일 기준 2~3주 이내 게시 예정입니다.<br>※ 필요 시 담당자가 개별 연락드립니다.";
+      msg.style.color = "green";
     } else {
-      msgBox.innerHTML="❌ 제출 실패: "+(data.error || "알 수 없는 오류");
-      msgBox.style.color="red";
-      msgBox.style.display="block";
+      msg.innerHTML = "제출 실패: " + (data.error||"알 수 없는 오류");
+      msg.style.color = "red";
     }
-  } catch (err) {
-    const msgBox=document.getElementById("submitMessage");
-    msgBox.innerHTML="❌ 제출 중 오류 발생: "+err.message;
-    msgBox.style.color="red";
-    msgBox.style.display="block";
+  } catch(err) {
+    msg.innerHTML = "네트워크 오류: " + err.message;
+    msg.style.color = "red";
   }
+  msg.style.display="block";
 });
 </script>
 </body>
