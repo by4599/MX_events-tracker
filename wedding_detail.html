@@ -5,14 +5,34 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>추가 정보 입력</title>
 <style>
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:24px;background:#f9f9f9;color:#111}
-.card{max-width:720px;margin:0 auto;background:#fff;padding:24px;border-radius:16px;box-shadow:0 2px 6px rgba(0,0,0,0.1)}
-h2{margin-top:0}
-label{display:block;margin:12px 0 6px;font-weight:600}
-input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box}
-.btn{padding:12px 16px;border:0;border-radius:8px;cursor:pointer;font-weight:600}
-.btn.primary{background:#111;color:#fff;width:100%;margin-top:16px}
-.preview{white-space:pre-wrap;border:1px solid #ddd;padding:16px;border-radius:12px;background:#fafafa;margin-top:16px;font-family:"Batang",serif;font-size:14pt}
+body{
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  margin:0;padding:16px;background:#f9f9f9;color:#111
+}
+.card{
+  max-width:420px;
+  margin:0 auto;background:#fff;padding:16px;
+  border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,0.1)
+}
+h2{margin-top:0;font-size:18px}
+.row-inline{
+  display:flex;align-items:center;gap:6px;margin:8px 0;
+  flex-wrap:wrap;
+}
+.row-inline label{
+  flex:0 0 120px;font-size:14px;font-weight:600
+}
+.row-inline input,.row-inline select{
+  flex:1;min-width:0;
+  padding:8px;font-size:14px;
+  border:1px solid #ccc;border-radius:6px
+}
+.btn{
+  padding:10px 12px;border:0;border-radius:6px;
+  cursor:pointer;font-weight:600;font-size:14px
+}
+.btn.primary{background:#111;color:#fff;width:100%;margin-top:12px}
+.preview{white-space:pre-wrap;border:1px solid #ddd;padding:12px;border-radius:12px;background:#fafafa;margin-top:12px;font-size:14px}
 .hidden{display:none}
 </style>
 </head>
@@ -20,24 +40,37 @@ input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;box
 <div class="card">
   <h2>추가 정보 입력</h2>
 
-  <label>임원 성함 *</label>
-  <input id="name" />
-  <label>재직/퇴직 *</label>
-  <select id="empStatus"><option value="">선택</option><option>재직</option><option>퇴직</option></select>
-  <label>근무 부서 *</label>
-  <input id="deptWhenEmployed" />
-  <label>현 직장/직책 *</label>
-  <input id="currentJobTitle" />
-  <label>청탁금지법 대상 여부 *</label>
-  <select id="antiGraft"><option value="">선택</option><option>대상</option><option>비대상</option></select>
-  <label>축의계좌 *</label>
-  <input id="bankNumber" />
-  <label>은행 *</label>
-  <select id="bankName"><option value="">선택</option><option>국민</option><option>신한</option><option>우리</option><option>하나</option><option>농협</option><option>기업</option></select>
-  <label>연락처 *</label>
-  <input id="phone" placeholder="010-1234-5678" />
-  <label>퇴임임원 문자 알림 계좌번호 공개 여부 *</label>
-  <select id="accountDisclosure"><option value="">선택</option><option>희망</option><option>비희망</option></select>
+  <div class="row-inline"><label>임원 성함 *</label><input id="name" /></div>
+  <div class="row-inline">
+    <label>임원측 *</label>
+    <div>
+      <label><input type="radio" name="parentSide" value="groom"> 신랑측</label>
+      <label><input type="radio" name="parentSide" value="bride"> 신부측</label>
+    </div>
+  </div>
+  <div class="row-inline">
+    <label>재직/퇴직 *</label>
+    <select id="empStatus"><option value="">선택</option><option>재직</option><option>퇴임</option></select>
+  </div>
+  <div class="row-inline"><label>근무 부서 *</label><input id="deptWhenEmployed" /></div>
+  <div class="row-inline"><label>직책 *</label><input id="currentJobTitle" /></div>
+  <div class="row-inline">
+    <label>청탁금지법 *</label>
+    <select id="antiGraft"><option value="">선택</option><option>대상</option><option>비대상</option></select>
+  </div>
+  <div class="row-inline"><label>축의계좌 *</label><input id="bankNumber" /></div>
+  <div class="row-inline">
+    <label>은행 *</label>
+    <select id="bankName">
+      <option value="">선택</option><option>국민</option><option>신한</option><option>우리</option>
+      <option>하나</option><option>농협</option><option>기업</option>
+    </select>
+  </div>
+  <div class="row-inline"><label>연락처 *</label><input id="phone" placeholder="010-1234-5678" /></div>
+  <div class="row-inline">
+    <label>계좌공개 *</label>
+    <select id="accountDisclosure"><option value="">선택</option><option>희망</option><option>비희망</option></select>
+  </div>
 
   <button class="btn primary" id="btnPreview">게시글 미리보기</button>
   <div id="previewBox" class="preview hidden"></div>
@@ -45,51 +78,122 @@ input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;box
 </div>
 
 <script>
-// 🟢 복성 성씨 처리
+const invite=JSON.parse(localStorage.getItem('inviteInfo')||'{}');
+
+// 🟢 전화번호 자동 하이픈 (연락처 input)
+document.getElementById('phone').addEventListener('input',(e)=>{
+  let num=e.target.value.replace(/\D/g,"");
+  if(num.length===10){
+    num=num.replace(/(\d{2,3})(\d{3,4})(\d{4})/,"$1-$2-$3");
+  }else if(num.length===11){
+    num=num.replace(/(\d{3})(\d{4})(\d{4})/,"$1-$2-$3");
+  }
+  e.target.value=num;
+});
+
+// 🟢 예식장 주소 내 전화번호 자동 하이픈
+function formatVenueAddr(rawAddr){
+  const telMatch=rawAddr.match(/(\d{2,4})[- ]?(\d{3,4})[- ]?(\d{4})/);
+  if(telMatch){
+    const tel=telMatch[1]+"-"+telMatch[2]+"-"+telMatch[3];
+    return rawAddr.replace(telMatch[0],tel);
+  }
+  return rawAddr;
+}
+
+// 🟢 성 추출/자녀 이름 보정
 const compoundSurnames=["남궁","황보","제갈","사공","선우","서문","독고","동방"];
+
 function extractSurname(fatherName){
   if(!fatherName) return "";
   const firstTwo=fatherName.slice(0,2);
   if(compoundSurnames.includes(firstTwo)) return firstTwo;
   return fatherName[0];
 }
+
 function getChildName(fatherName, childName){
   if(!childName) return "";
   const surname=extractSurname(fatherName);
   if(surname && childName.startsWith(surname)){
-    return childName.slice(surname.length);
+    return childName.slice(surname.length); // 성 제거
   }
-  return childName;
+  return childName; // 성 없음 → 그대로
 }
 
-const invite=JSON.parse(localStorage.getItem('inviteInfo')||'{}');
+function formatDateTime(dateStr, timeStr){
+  try{
+    const days=["일요일","월요일","화요일","수요일","목요일","금요일","토요일"];
+    const d=new Date(`${dateStr}T${timeStr}`);
+    const y=d.getFullYear(), m=d.getMonth()+1, day=d.getDate(), dow=days[d.getDay()];
+    let hour=d.getHours(), min=("0"+d.getMinutes()).slice(-2);
+    const ampm=hour<12?"오전":"오후";
+    if(hour===0) hour=12;
+    else if(hour>12) hour-=12;
+    return `${y}년 ${m}월 ${day}일 ${dow} ${ampm} ${hour}시 ${min}분`;
+  }catch{ return dateStr+" "+timeStr; }
+}
 
-// 미리보기
+// 🟢 미리보기
 document.getElementById('btnPreview').addEventListener('click',()=>{
+  const side=document.querySelector('input[name="parentSide"]:checked')?.value;
+  const empStatus=document.getElementById('empStatus').value;
+  const dept=document.getElementById('deptWhenEmployed').value;
   const name=document.getElementById('name').value;
   const job=document.getElementById('currentJobTitle').value;
   const phone=document.getElementById('phone').value;
   const bank=document.getElementById('bankName').value;
   const bankNum=document.getElementById('bankNumber').value;
+  const anti=document.getElementById('antiGraft').value;
 
-  const groomName=getChildName(invite.groomFather,invite.groomName);
-  const brideName=getChildName(invite.brideFather,invite.brideName);
+  // 임원 header
+  let header="";
+  if(empStatus==="재직"){
+    header=`<div style="font-size:14pt"><b>삼성전자 ${dept} ${name} ${job} ${side==="groom"?invite.groomOrder:invite.brideOrder}결혼</b>을 안내하오니<br>많은 축하 부탁드립니다.</div><br>`;
+  }else{
+    header=`<div style="font-size:14pt"><b>전)삼성전자 ${dept} ${name} ${job} ${side==="groom"?invite.groomOrder:invite.brideOrder}결혼</b>을 안내하오니<br>많은 축하 부탁드립니다.</div><br>`;
+  }
 
-  let preview=`□ 일 시 : ${invite.eventDate} ${invite.eventTime}\n`;
-  preview+=`□ 장 소 : ${invite.venueDetail}\n           (${invite.venueAddr})\n`;
-  preview+=`□ 연락처 : ${phone} (${name} ${job})\n`;
-  preview+=`□ 축의금 전달계좌 : ${bank}은행 ${bankNum} (${name})\n\n`; // 🔹 한 줄 띄우기
+  // 혼주 block (성이 있을 경우에만 제거)
+  let familyBlock="";
+  if(side==="groom"){
+    familyBlock=`<div style="font-size:16pt;font-weight:bold">`+
+      `${invite.groomFather} · ${invite.groomMother} 의 ${invite.groomOrder} ${getChildName(invite.groomFather, invite.groomName)}</div>`+
+      `<div style="font-size:16pt">`+
+      `${invite.brideFather} · ${invite.brideMother} 의 ${invite.brideOrder} ${getChildName(invite.brideFather, invite.brideName)}</div><br>`;
+  }else{
+    familyBlock=`<div style="font-size:16pt;font-weight:bold">`+
+      `${invite.brideFather} · ${invite.brideMother} 의 ${invite.brideOrder} ${getChildName(invite.brideFather, invite.brideName)}</div>`+
+      `<div style="font-size:16pt">`+
+      `${invite.groomFather} · ${invite.groomMother} 의 ${invite.groomOrder} ${getChildName(invite.groomFather, invite.groomName)}</div><br>`;
+  }
 
+  // 일정 및 주소
+  let schedule=`<div style="font-size:12pt">`+
+    `□ 일 시 : ${formatDateTime(invite.eventDate,invite.eventTime)}<br>`+
+    `□ 장 소 : ${invite.venueDetail}<br>`+
+    `&nbsp;&nbsp;&nbsp;&nbsp;(${formatVenueAddr(invite.venueAddr)})<br>`+
+    `□ 연락처 : ${phone} (${name} ${job})<br>`+
+    `□ 축의금 전달계좌 : ${bank}은행 ${bankNum} (${name})</div><br>`;
+
+  // 스몰웨딩 여부
+  let smallWedding="";
   if(invite.isSmallWedding==="예"){
-    preview+=`※ 작은 결혼식인 관계로 가족 및 친지를 초청하여 진행하오니 양해바랍니다.\n`; // 🔹 빈 줄 없음
-  }
-  if(document.getElementById('antiGraft').value==="대상"){
-    preview+=`※ 청탁금지법 대상\n`;
-  } else if(document.getElementById('antiGraft').value==="비대상"){
-    preview+=`※ 청탁금지법 비대상\n`;
+    smallWedding=`<div style="font-size:12pt">※ 작은 결혼식인 관계로 가족 및 친지를 초청하여 진행하오니 양해바랍니다.</div>`;
   }
 
-  document.getElementById('previewBox').textContent=preview;
+  // 청탁금지법
+  let graftNote="";
+  if(anti==="대상"){
+    graftNote=`<div style="font-size:12pt">※ 청탁금지법 대상</div>`;
+  }else if(anti==="비대상"){
+    graftNote=`<div style="font-size:12pt">※ 청탁금지법 비대상</div>`;
+  }
+
+  const preview=
+    `<div style="font-family:Batang;line-height:1.6">`+
+    `${header}${familyBlock}${schedule}${smallWedding}${graftNote}</div>`;
+
+  document.getElementById('previewBox').innerHTML=preview;
   document.getElementById('previewBox').classList.remove('hidden');
 });
 </script>
