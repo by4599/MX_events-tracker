@@ -1,19 +1,39 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>결혼식 정보 입력</title>
 <style>
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:24px;background:#f9f9f9;color:#111}
-.card{max-width:720px;margin:0 auto;background:#fff;padding:24px;border-radius:16px;box-shadow:0 2px 6px rgba(0,0,0,0.1)}
+body{
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  margin:0;padding:24px;background:#f9f9f9;color:#111
+}
+.card{
+  max-width:480px; /* 페이지 폭 좁힘 */
+  margin:0 auto;background:#fff;padding:24px;
+  border-radius:16px;box-shadow:0 2px 6px rgba(0,0,0,0.1)
+}
 h2{margin-top:0}
 label{display:block;margin:12px 0 6px;font-weight:600}
-input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box}
+input,select{
+  width:100%;padding:10px;
+  border:1px solid #ccc;border-radius:8px;
+  box-sizing:border-box
+}
 .row{display:flex;gap:8px}
-.btn{padding:12px 16px;border:0;border-radius:8px;cursor:pointer;font-weight:600}
+.btn{
+  padding:12px 16px;border:0;border-radius:8px;
+  cursor:pointer;font-weight:600
+}
 .btn.primary{background:#111;color:#fff;width:100%;margin-top:16px}
-.checkbox{margin:12px 0}
+.btn.blue{background:#007bff;color:#fff;width:100%;margin-top:8px}
+.checkbox{
+  margin:12px 0;
+  display:flex;align-items:center;gap:6px;
+}
 .section{margin-top:24px;padding-top:16px;border-top:1px solid #eee}
+.note{font-size:12px;color:#666;margin-top:4px}
 </style>
 </head>
 <body>
@@ -21,46 +41,46 @@ input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;box
   <h2>결혼식 기본 정보 입력</h2>
 
   <!-- 청첩장 URL -->
-<label>모바일 청첩장 URL *</label>
-<input id="inviteUrl" placeholder="https://..." />
-<div class="checkbox">
-  <label><input type="checkbox" id="noInvite"> 모바일 청첩장 없음</label>
-</div>
+  <label>모바일 청첩장 URL *</label>
+  <input id="inviteUrl" placeholder="https://..." />
+  <div class="checkbox">
+    <input type="checkbox" id="noInvite">
+    <label for="noInvite" style="margin:0">모바일 청첩장 없음</label>
+  </div>
 
-<!-- URL 확인 버튼 -->
-<button class="btn" id="btnCheckUrl" style="margin-top:8px;background:#007bff;color:#fff;width:100%">청첩장 URL 확인</button>
-<div id="urlResult" style="margin-top:8px;font-size:14px;color:#333"></div>
-
+  <!-- URL 확인 버튼 -->
+  <button class="btn blue" id="btnCheckUrl">AI로 예식정보 확인</button>
+  <div id="urlResult" style="margin-top:8px;font-size:14px;color:#333"></div>
 
   <!-- 신랑측 -->
   <div class="section">
     <h3>신랑측</h3>
-    <label>아빠 이름 *</label>
+    <label>혼주 아버지 성함 *</label>
     <input id="groomFather" />
-    <label>엄마 이름 *</label>
+    <label>혼주 어머니 성함 *</label>
     <input id="groomMother" />
-    <label>자녀 순서 *</label>
+    <label>자녀 구분 *</label>
     <select id="groomOrder">
       <option value="">선택</option>
       <option>장남</option><option>차남</option><option>삼남</option><option>아들</option>
     </select>
-    <label>자녀 이름 *</label>
+    <label>신랑 성명 *</label>
     <input id="groomName" />
   </div>
 
   <!-- 신부측 -->
   <div class="section">
     <h3>신부측</h3>
-    <label>아빠 이름 *</label>
+    <label>혼주 아버지 성함 *</label>
     <input id="brideFather" />
-    <label>엄마 이름 *</label>
+    <label>혼주 어머니 성함 *</label>
     <input id="brideMother" />
-    <label>자녀 순서 *</label>
+    <label>자녀 구분 *</label>
     <select id="brideOrder">
       <option value="">선택</option>
       <option>장녀</option><option>차녀</option><option>삼녀</option><option>딸</option>
     </select>
-    <label>자녀 이름 *</label>
+    <label>신부 성명 *</label>
     <input id="brideName" />
   </div>
 
@@ -72,13 +92,25 @@ input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;box
       <input type="date" id="eventDate" />
       <input type="time" id="eventTime" step="600" />
     </div>
+    <div class="note">※ 해외의 경우 현지시간으로 입력 바랍니다.</div>
+
+    <label>예식장 주소 *</label>
+    <div class="row">
+      <input id="venueAddr" placeholder="도로명 주소 입력" />
+      <button type="button" class="btn blue" style="flex:0 0 100px" onclick="searchAddress()">검색</button>
+    </div>
+    
     <label>예식장 *</label>
     <input id="venue" />
-    <label>예식장 주소 *</label>
-    <input id="venueAddr" />
+
     <label>스몰웨딩 여부 *</label>
     <select id="isSmallWedding">
       <option value="">선택</option><option>예</option><option>아니오</option>
+    </select>
+
+    <label>화환 수령 *</label>
+    <select id="flowerOption">
+      <option value="">선택</option><option>희망</option><option>비희망</option>
     </select>
   </div>
 
@@ -87,14 +119,13 @@ input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;box
 </div>
 
 <script>
-// ✅ 청첩장 URL 확인 버튼
+// 🚨 Apps Script Web App은 반드시 [모든 사용자 액세스 허용]으로 배포해야 fetch가 동작합니다.
+const ENDPOINT="https://script.google.com/macros/s/YOUR_DEPLOY_ID/exec";
+
+// AI로 예식정보 확인
 document.getElementById('btnCheckUrl').addEventListener('click', async ()=>{
   const url=document.getElementById('inviteUrl').value;
-  if(!url){ 
-    alert("URL을 입력하세요."); 
-    return; 
-  }
-  const ENDPOINT="https://script.google.com/macros/s/YOUR_DEPLOY_ID/exec";
+  if(!url){ alert("URL을 입력하세요."); return; }
   try{
     const res=await fetch(`${ENDPOINT}?action=extract&url=${encodeURIComponent(url)}`);
     const data=await res.json();
@@ -113,7 +144,7 @@ document.getElementById('btnCheckUrl').addEventListener('click', async ()=>{
       document.getElementById('venue').value=data.venue||"";
       document.getElementById('venueAddr').value=data.venueAddr||"";
 
-      document.getElementById('urlResult').innerHTML="<span style='color:green'>청첩장 정보가 자동 입력되었습니다 ✅</span>";
+      document.getElementById('urlResult').innerHTML="<span style='color:green'>예식정보가 자동 입력되었습니다 ✅</span>";
     }else{
       document.getElementById('urlResult').innerHTML="<span style='color:red'>정보 추출 실패 ❌</span>";
     }
@@ -122,7 +153,7 @@ document.getElementById('btnCheckUrl').addEventListener('click', async ()=>{
   }
 });
 
-// ✅ 추가 정보 입력 버튼
+// 다음 단계 버튼
 document.getElementById('btnNext').addEventListener('click',()=>{
   const info={
     inviteUrl:document.getElementById('inviteUrl').value,
@@ -139,13 +170,17 @@ document.getElementById('btnNext').addEventListener('click',()=>{
     eventTime:document.getElementById('eventTime').value,
     venue:document.getElementById('venue').value,
     venueAddr:document.getElementById('venueAddr').value,
-    isSmallWedding:document.getElementById('isSmallWedding').value
+    isSmallWedding:document.getElementById('isSmallWedding').value,
+    flowerOption:document.getElementById('flowerOption').value
   };
-  // localStorage 저장 → wedding_detail.html 에서 사용
   localStorage.setItem('inviteInfo',JSON.stringify(info));
   location.href='wedding_detail.html';
 });
-</script>
 
+// 도로명 주소 검색 (예제 placeholder)
+function searchAddress(){
+  alert("도로명 주소 검색 기능은 카카오/네이버 API 연동 필요합니다.");
+}
+</script>
 </body>
 </html>
