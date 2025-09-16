@@ -101,6 +101,25 @@ function formatVenueAddr(rawAddr){
   return rawAddr;
 }
 
+// 🟢 성 추출/자녀 이름 보정
+const compoundSurnames=["남궁","황보","제갈","사공","선우","서문","독고","동방"];
+
+function extractSurname(fatherName){
+  if(!fatherName) return "";
+  const firstTwo=fatherName.slice(0,2);
+  if(compoundSurnames.includes(firstTwo)) return firstTwo;
+  return fatherName[0];
+}
+
+function getChildName(fatherName, childName){
+  if(!childName) return "";
+  const surname=extractSurname(fatherName);
+  if(surname && childName.startsWith(surname)){
+    return childName.slice(surname.length); // 성 제거
+  }
+  return childName; // 성 없음 → 그대로
+}
+
 function formatDateTime(dateStr, timeStr){
   try{
     const days=["일요일","월요일","화요일","수요일","목요일","금요일","토요일"];
@@ -134,18 +153,18 @@ document.getElementById('btnPreview').addEventListener('click',()=>{
     header=`<div style="font-size:14pt"><b>전)삼성전자 ${dept} ${name} ${job} ${side==="groom"?invite.groomOrder:invite.brideOrder}결혼</b>을 안내하오니<br>많은 축하 부탁드립니다.</div><br>`;
   }
 
-  // 혼주 block
+  // 혼주 block (성이 있을 경우에만 제거)
   let familyBlock="";
   if(side==="groom"){
     familyBlock=`<div style="font-size:16pt;font-weight:bold">`+
-      `${invite.groomFather} · ${invite.groomMother} 의 ${invite.groomOrder} ${invite.groomName.replace(/^./,"")}</div>`+
+      `${invite.groomFather} · ${invite.groomMother} 의 ${invite.groomOrder} ${getChildName(invite.groomFather, invite.groomName)}</div>`+
       `<div style="font-size:16pt">`+
-      `${invite.brideFather} · ${invite.brideMother} 의 ${invite.brideOrder} ${invite.brideName.replace(/^./,"")}</div><br>`;
+      `${invite.brideFather} · ${invite.brideMother} 의 ${invite.brideOrder} ${getChildName(invite.brideFather, invite.brideName)}</div><br>`;
   }else{
     familyBlock=`<div style="font-size:16pt;font-weight:bold">`+
-      `${invite.brideFather} · ${invite.brideMother} 의 ${invite.brideOrder} ${invite.brideName.replace(/^./,"")}</div>`+
+      `${invite.brideFather} · ${invite.brideMother} 의 ${invite.brideOrder} ${getChildName(invite.brideFather, invite.brideName)}</div>`+
       `<div style="font-size:16pt">`+
-      `${invite.groomFather} · ${invite.groomMother} 의 ${invite.groomOrder} ${invite.groomName.replace(/^./,"")}</div><br>`;
+      `${invite.groomFather} · ${invite.groomMother} 의 ${invite.groomOrder} ${getChildName(invite.groomFather, invite.groomName)}</div><br>`;
   }
 
   // 일정 및 주소
