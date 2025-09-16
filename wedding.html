@@ -10,7 +10,7 @@ body{
   margin:0;padding:16px;background:#f9f9f9;color:#111
 }
 .card{
-  max-width:420px; /* 모바일 최적화 */
+  max-width:420px;
   margin:0 auto;background:#fff;padding:16px;
   border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,0.1)
 }
@@ -69,7 +69,8 @@ h3{margin:12px 0;font-size:16px}
     <div class="row-inline">
       <label>형제관계 *</label>
       <select id="groomOrder">
-        <option value="">선택</option><option>장남</option><option>차남</option><option>삼남</option><option>아들</option>
+        <option value="">선택</option>
+        <option>장남</option><option>차남</option><option>삼남</option>
       </select>
     </div>
     <div class="row-inline"><label>신랑 성명 *</label><input id="groomName" /></div>
@@ -83,7 +84,8 @@ h3{margin:12px 0;font-size:16px}
     <div class="row-inline">
       <label>형제관계 *</label>
       <select id="brideOrder">
-        <option value="">선택</option><option>장녀</option><option>차녀</option><option>삼녀</option><option>딸</option>
+        <option value="">선택</option>
+        <option>장녀</option><option>차녀</option><option>삼녀</option>
       </select>
     </div>
     <div class="row-inline"><label>신부 성명 *</label><input id="brideName" /></div>
@@ -127,10 +129,28 @@ h3{margin:12px 0;font-size:16px}
 // Apps Script Endpoint
 const ENDPOINT="https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec";
 
-// AI로 예식정보 확인
+// 🟢 전화번호 하이픈 포맷
+function formatVenueAddr(rawAddr){
+  const telMatch = rawAddr.match(/(\d{2,4}[- ]?\d{3,4}[- ]?\d{4})/);
+  if(telMatch){
+    let tel = telMatch[1].replace(/\D/g,"");
+    if(tel.length===10){
+      tel = tel.replace(/(\d{2})(\d{3,4})(\d{4})/,"$1-$2-$3");
+    }else if(tel.length===11){
+      tel = tel.replace(/(\d{3})(\d{4})(\d{4})/,"$1-$2-$3");
+    }
+    return rawAddr.replace(telMatch[1], tel);
+  }
+  return rawAddr;
+}
+
+// 🟢 AI로 예식정보 확인
 document.getElementById('btnCheckUrl').addEventListener('click', async ()=>{
   const url=document.getElementById('inviteUrl').value;
   if(!url){ alert("URL을 입력하세요."); return; }
+
+  document.getElementById('urlResult').innerHTML="<span style='color:blue'>AI로 분석 중이니 잠시만 기다려주세요...</span>";
+
   try{
     const res=await fetch(`${ENDPOINT}?action=extract&url=${encodeURIComponent(url)}`);
     const data=await res.json();
@@ -145,9 +165,10 @@ document.getElementById('btnCheckUrl').addEventListener('click', async ()=>{
       document.getElementById('brideName').value=data.brideName||"";
       document.getElementById('eventDate').value=data.eventDate||"";
       document.getElementById('eventTime').value=data.eventTime||"";
-      document.getElementById('venueAddr').value=data.venueAddr||"";
+      document.getElementById('venueAddr').value=formatVenueAddr(data.venueAddr||"");
       document.getElementById('venueDetail').value=data.venue||"";
-      document.getElementById('urlResult').innerHTML="<span style='color:green'>예식정보가 자동 입력되었습니다 ✅</span>";
+
+      document.getElementById('urlResult').innerHTML="<span style='color:green'>AI로 예식 정보가 입력되었습니다. 확인 바랍니다 ✅</span>";
     }else{
       document.getElementById('urlResult').innerHTML="<span style='color:red'>정보 추출 실패 ❌</span>";
     }
@@ -156,7 +177,7 @@ document.getElementById('btnCheckUrl').addEventListener('click', async ()=>{
   }
 });
 
-// 다음 단계 저장
+// 🟢 다음 단계 저장
 document.getElementById('btnNext').addEventListener('click',()=>{
   const info={
     inviteUrl:document.getElementById('inviteUrl').value,
@@ -184,7 +205,6 @@ document.getElementById('btnNext').addEventListener('click',()=>{
 function searchAddress(){
   new daum.Postcode({
     oncomplete: function(data) {
-      // 기본 도로명 주소만 입력
       document.getElementById("venueAddr").value = data.roadAddress || data.address;
     }
   }).open();
