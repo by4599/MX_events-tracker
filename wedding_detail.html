@@ -7,33 +7,33 @@
 <style>
 body {
   font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  margin: 0; padding: 16px; background: #f9f9f9;
+  margin:0; padding:16px; background:#f9f9f9;
 }
 .card {
-  max-width: 420px; margin: 0 auto; background: #fff;
-  padding: 16px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  max-width:420px; margin:0 auto; background:#fff;
+  padding:16px; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,0.1);
 }
-h2 { margin: 0 0 12px; font-size: 18px }
+h2 { margin:0 0 12px; font-size:18px }
 .row {
-  display: flex; align-items: center; gap: 6px; margin: 8px 0; flex-wrap: wrap;
+  display:flex; align-items:center; gap:6px; margin:8px 0; flex-wrap:wrap;
 }
 .row label {
-  flex: 0 0 120px; font-size: 14px; font-weight: 600;
+  flex:0 0 120px; font-size:14px; font-weight:600;
 }
 .row input, .row select {
-  flex: 1; min-width: 0; padding: 8px; font-size: 14px;
-  border: 1px solid #ccc; border-radius: 6px;
+  flex:1; min-width:0; padding:8px; font-size:14px;
+  border:1px solid #ccc; border-radius:6px;
 }
 .btn {
-  padding: 10px; border: 0; border-radius: 6px; cursor: pointer;
-  font-weight: 600; font-size: 14px; margin-top: 10px;
+  padding:10px; border:0; border-radius:6px; cursor:pointer;
+  font-weight:600; font-size:14px; margin-top:10px;
 }
-.btn.primary { background: #111; color: #fff; width: 100% }
+.btn.primary { background:#111; color:#fff; width:100% }
 .preview {
-  white-space: pre-wrap; border: 1px solid #ddd; padding: 12px;
-  border-radius: 12px; background: #fafafa; margin-top: 12px; font-size: 14px;
+  white-space:pre-wrap; border:1px solid #ddd; padding:12px;
+  border-radius:12px; background:#fafafa; margin-top:12px; font-size:14px;
 }
-.msg { margin-top: 10px; display: none }
+.msg { margin-top:10px; display:none }
 </style>
 </head>
 <body>
@@ -130,16 +130,16 @@ phone.addEventListener('input', e => {
 
 function formatDateTime(d, t) {
   try {
-    const w = ["일", "월", "화", "수", "목", "금", "토"];
+    const w = ["일","월","화","수","목","금","토"];
     const dd = new Date(`${d}T${t}`);
-    let h = dd.getHours(), m = ("0" + dd.getMinutes()).slice(-2);
+    let h = dd.getHours(), m = ("0"+dd.getMinutes()).slice(-2);
     const ap = h < 12 ? "오전" : "오후";
     if (h === 0) h = 12; else if (h > 12) h -= 12;
     return `${dd.getFullYear()}년 ${dd.getMonth()+1}월 ${dd.getDate()}일 ${w[dd.getDay()]}요일 ${ap} ${h}시 ${m}분`;
   } catch { return d + " " + t }
 }
 
-// 미리보기
+// 🟢 미리보기
 document.getElementById('btnPreview').addEventListener('click', () => {
   const side = document.querySelector('input[name="parentSide"]:checked')?.value;
   const emp = document.getElementById('empStatus').value;
@@ -181,7 +181,7 @@ document.getElementById('btnPreview').addEventListener('click', () => {
   document.getElementById('previewBox').classList.remove('hidden');
 });
 
-// 제출
+// 🟢 제출
 document.getElementById('btnSubmit').addEventListener('click', async () => {
   const payload = {
     ...invite,
@@ -203,12 +203,13 @@ document.getElementById('btnSubmit').addEventListener('click', async () => {
   try {
     const res = await fetch(ENDPOINT, {
       method:"POST",
+      headers: { "Content-Type":"application/json" },
       body: JSON.stringify(payload),
-      headers: {"Content-Type":"application/json"}
+      mode:"cors"
     });
     const data = await res.json();
     if (data.ok) {
-      msg.innerHTML = "신청이 완료되었습니다.<br>예식일 기준 2~3주 이내 게시 예정입니다.<br>※ 필요 시 담당자가 개별 연락드립니다.";
+      msg.innerHTML = "신청이 완료되었습니다.<br>예식일 기준 2~3주 내 게시 예정입니다.<br>※ 필요 시 담당자가 개별 연락드립니다.";
       msg.style.color = "green";
     } else {
       msg.innerHTML = "제출 실패: " + (data.error||"알 수 없는 오류");
