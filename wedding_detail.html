@@ -75,6 +75,21 @@ document.getElementById('phone').addEventListener('input',(e)=>{
   e.target.value=num;
 });
 
+// 🟢 미리보기
+document.getElementById('btnPreview').addEventListener('click', ()=>{
+  const previewBox=document.getElementById('previewBox');
+  previewBox.textContent="📄 미리보기 생성 중...";
+  previewBox.classList.remove('hidden');
+
+  // 단순히 로컬 데이터만 표시 (서버 X)
+  previewBox.textContent = `
+삼성전자 ${document.getElementById('deptWhenEmployed').value} ${document.getElementById('name').value} ${document.getElementById('currentJobTitle').value} ${invite.groomOrder||invite.brideOrder}결혼
+□ 일 시 : ${invite.eventDate} ${invite.eventTime}
+□ 장 소 : ${invite.venueDetail}
+(${invite.venueAddr})
+  `;
+});
+
 // 🟢 제출
 document.getElementById('btnSubmit').addEventListener('click', async ()=>{
   const payload = {
@@ -90,6 +105,9 @@ document.getElementById('btnSubmit').addEventListener('click', async ()=>{
     accountDisclosure: document.getElementById('accountDisclosure').value,
     parentSide: document.querySelector('input[name="parentSide"]:checked')?.value
   };
+
+  msg.textContent="⏳ 제출 중...";
+  msg.style.color="black";
 
   try {
     const res = await fetch("https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec", {
