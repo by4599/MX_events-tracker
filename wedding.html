@@ -1,245 +1,64 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>결혼식 정보 입력</title>
-<style>
-body{
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  margin:0;padding:16px;background:#f9f9f9;color:#111
-}
-.card{
-  max-width:420px;
-  margin:0 auto;background:#fff;padding:16px;
-  border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,0.1)
-}
-h2{margin-top:0;font-size:18px}
-h3{margin:12px 0;font-size:16px}
-.row-inline{
-  display:flex;align-items:center;gap:6px;margin:8px 0;
-  flex-wrap:wrap;
-}
-.row-inline label{
-  flex:0 0 100px;font-size:14px;font-weight:600
-}
-.row-inline input,.row-inline select{
-  flex:1;min-width:0;
-  padding:8px;font-size:14px;
-  border:1px solid #ccc;border-radius:6px
-}
-.btn{
-  padding:10px 12px;border:0;border-radius:6px;
-  cursor:pointer;font-weight:600;font-size:14px
-}
-.btn.primary{background:#111;color:#fff;width:100%;margin-top:16px}
-.btn.blue{background:#007bff;color:#fff}
-.btn-inline{
-  flex:0 0 auto;margin-left:auto;margin-top:6px;width:100%
-}
-@media(min-width:600px){
-  .btn-inline{width:auto;margin-top:0}
-}
-.checkbox{margin:12px 0;display:flex;align-items:center;gap:6px;}
-.section{margin-top:16px;padding-top:12px;border-top:1px solid #eee}
-.note{font-size:12px;color:#666;margin-top:2px}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>모바일 청첩장 분석</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:16px;background:#f9f9f9;color:#111}
+    .card{max-width:420px;margin:0 auto;background:#fff;padding:16px;
+      border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,0.1)}
+    h2{margin-top:0;font-size:18px}
+    .row-inline{display:flex;align-items:center;gap:6px;margin:8px 0;flex-wrap:wrap}
+    .row-inline label{flex:0 0 120px;font-size:14px;font-weight:600}
+    .row-inline input{flex:1;min-width:0;padding:8px;font-size:14px;border:1px solid #ccc;border-radius:6px}
+    .btn{padding:10px 12px;border:0;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px}
+    .btn.primary{background:#111;color:#fff;width:100%;margin-top:12px}
+    #msg{margin-top:12px;font-size:14px}
+  </style>
 </head>
 <body>
 <div class="card">
-  <h2>결혼식 기본 정보 입력</h2>
-
-  <!-- 청첩장 URL -->
+  <h2>청첩장 URL 입력</h2>
   <div class="row-inline">
-    <label for="inviteUrl">청첩장 URL *</label>
-    <input id="inviteUrl" placeholder="https://..." />
+    <label for="inviteUrl">청첩장 URL</label>
+    <input id="inviteUrl" type="url" placeholder="https://example.com"/>
   </div>
-  <div class="checkbox">
-    <input type="checkbox" id="noInvite">
-    <label for="noInvite" style="margin:0">모바일 청첩장 없음</label>
-  </div>
-  <button class="btn blue" id="btnCheckUrl" style="width:100%">AI로 예식정보 확인</button>
-  <div id="urlResult" style="margin-top:6px;font-size:13px;color:#333"></div>
-
-  <!-- 신랑측 -->
-  <div class="section">
-    <h3>신랑측</h3>
-    <div class="row-inline"><label>혼주 아버지 *</label><input id="groomFather" /></div>
-    <div class="row-inline"><label>혼주 어머니 *</label><input id="groomMother" /></div>
-    <div class="row-inline">
-      <label>형제관계 *</label>
-      <select id="groomOrder">
-        <option value="">선택</option>
-        <option>장남</option><option>차남</option><option>삼남</option>
-      </select>
-    </div>
-    <div class="row-inline"><label>신랑 성명 *</label><input id="groomName" /></div>
-  </div>
-
-  <!-- 신부측 -->
-  <div class="section">
-    <h3>신부측</h3>
-    <div class="row-inline"><label>혼주 아버지 *</label><input id="brideFather" /></div>
-    <div class="row-inline"><label>혼주 어머니 *</label><input id="brideMother" /></div>
-    <div class="row-inline">
-      <label>형제관계 *</label>
-      <select id="brideOrder">
-        <option value="">선택</option>
-        <option>장녀</option><option>차녀</option><option>삼녀</option>
-      </select>
-    </div>
-    <div class="row-inline"><label>신부 성명 *</label><input id="brideName" /></div>
-  </div>
-
-  <!-- 예식 정보 -->
-  <div class="section">
-    <h3>예식 정보</h3>
-    <div class="row-inline"><label>예식일 *</label><input type="date" id="eventDate" /></div>
-    <div class="row-inline"><label>예식시간 *</label><input type="time" id="eventTime" step="600" /></div>
-    <div class="note">※ 해외의 경우 현지시간으로 입력 바랍니다.</div>
-
-    <div class="row-inline">
-      <label>예식장 주소 *</label>
-      <input id="venueAddr" placeholder="도로명 주소 입력" readonly />
-      <button type="button" class="btn blue btn-inline" onclick="searchAddress()">검색</button>
-    </div>
-    <div class="row-inline"><label>예식장 세부 *</label><input id="venueDetail" placeholder="층/홀명 등" /></div>
-
-    <div class="row-inline">
-      <label>스몰웨딩 *</label>
-      <select id="isSmallWedding">
-        <option value="">선택</option><option>예</option><option>아니오</option>
-      </select>
-    </div>
-    <div class="row-inline">
-      <label>화환 수령 *</label>
-      <select id="flowerOption">
-        <option value="">선택</option><option>희망</option><option>비희망</option>
-      </select>
-    </div>
-  </div>
-
-  <button class="btn primary" id="btnNext">추가 정보 입력</button>
+  <button class="btn primary" id="btnAnalyze">AI로 예식 정보 확인</button>
+  <div id="msg"></div>
 </div>
 
-<!-- 🟢 Daum 주소검색 API -->
-<script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
-
 <script>
-// Apps Script Endpoint
-const ENDPOINT="https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec";
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbyY9JgPGnVIy2MlpLlxb06P9LaWamoVtx5Kn-Uo9rTXFIqrPChVyNbzI1g3ox7drytP7g/exec";
 
-// 🟢 전화번호 하이픈 포맷
-function formatVenueAddr(rawAddr){
-  const telMatch = rawAddr.match(/(\d{2,4}[- ]?\d{3,4}[- ]?\d{4})/);
-  if(telMatch){
-    let tel = telMatch[1].replace(/\D/g,"");
-    if(tel.length===10){
-      tel = tel.replace(/(\d{2})(\d{3,4})(\d{4})/,"$1-$2-$3");
-    }else if(tel.length===11){
-      tel = tel.replace(/(\d{3})(\d{4})(\d{4})/,"$1-$2-$3");
-    }
-    return rawAddr.replace(telMatch[1], tel);
+document.getElementById("btnAnalyze").addEventListener("click", async ()=>{
+  const url = document.getElementById("inviteUrl").value.trim();
+  const msg = document.getElementById("msg");
+  if(!url){
+    msg.textContent="❌ URL을 입력해주세요.";
+    msg.style.color="red";return;
   }
-  return rawAddr;
-}
+  msg.textContent="⏳ AI 분석 중...";
+  msg.style.color="black";
 
-// 🟢 AI로 예식정보 확인
-document.getElementById('btnCheckUrl').addEventListener('click', async ()=>{
-  const url=document.getElementById('inviteUrl').value;
-  if(!url){ alert("URL을 입력하세요."); return; }
-
-  document.getElementById('urlResult').innerHTML="<span style='color:blue'>AI로 분석 중이니 잠시만 기다려주세요...</span>";
-
-  try{
-    const res=await fetch(`${ENDPOINT}?action=extract&url=${encodeURIComponent(url)}`);
-    const data=await res.json();
+  try {
+    const res = await fetch(`${ENDPOINT}?action=extract&url=${encodeURIComponent(url)}`, { method:"GET" });
+    if(!res.ok) throw new Error("서버 응답 오류");
+    const data = await res.json();
     if(data.ok){
-      document.getElementById('groomFather').value=data.groomFather||"";
-      document.getElementById('groomMother').value=data.groomMother||"";
-      document.getElementById('groomOrder').value=data.groomOrder||"";
-      document.getElementById('groomName').value=data.groomName||"";
-      document.getElementById('brideFather').value=data.brideFather||"";
-      document.getElementById('brideMother').value=data.brideMother||"";
-      document.getElementById('brideOrder').value=data.brideOrder||"";
-      document.getElementById('brideName').value=data.brideName||"";
-      document.getElementById('eventDate').value=data.eventDate||"";
-      document.getElementById('eventTime').value=data.eventTime||"";
-      document.getElementById('venueAddr').value=formatVenueAddr(data.venueAddr||"");
-      document.getElementById('venueDetail').value=data.venue||"";
-
-      document.getElementById('urlResult').innerHTML="<span style='color:green'>AI로 예식 정보가 입력되었습니다. 확인 바랍니다 ✅</span>";
+      localStorage.setItem("inviteInfo", JSON.stringify(data));
+      msg.textContent="✅ AI 분석 완료. 추가정보 입력 페이지로 이동하세요.";
+      msg.style.color="green";
+      setTimeout(()=>location.href="wedding_detail.html",1500);
     }else{
-      document.getElementById('urlResult').innerHTML="<span style='color:red'>정보 추출 실패 ❌</span>";
+      msg.textContent="❌ 분석 실패: "+(data.error||"알 수 없는 오류");
+      msg.style.color="red";
     }
-  }catch(err){
-    document.getElementById('urlResult').innerHTML="<span style='color:red'>오류: "+err.message+"</span>";
+  } catch(err){
+    msg.textContent="❌ 분석 요청 실패: "+err.message;
+    msg.style.color="red";
   }
 });
-
-// 🟢 다음 단계 저장 (필수 검증 추가)
-document.getElementById('btnNext').addEventListener('click',()=>{
-  const requiredFields = [
-    {id:'inviteUrl', label:'청첩장 URL', skipIfNoInvite:true},
-    {id:'groomFather', label:'신랑 혼주 아버지'},
-    {id:'groomMother', label:'신랑 혼주 어머니'},
-    {id:'groomOrder', label:'신랑 형제관계'},
-    {id:'groomName', label:'신랑 성명'},
-    {id:'brideFather', label:'신부 혼주 아버지'},
-    {id:'brideMother', label:'신부 혼주 어머니'},
-    {id:'brideOrder', label:'신부 형제관계'},
-    {id:'brideName', label:'신부 성명'},
-    {id:'eventDate', label:'예식일'},
-    {id:'eventTime', label:'예식시간'},
-    {id:'venueAddr', label:'예식장 주소'},
-    {id:'venueDetail', label:'예식장 세부'},
-    {id:'isSmallWedding', label:'스몰웨딩 여부'},
-    {id:'flowerOption', label:'화환 수령'}
-  ];
-
-  for(const f of requiredFields){
-    const val=document.getElementById(f.id).value.trim();
-    if(f.skipIfNoInvite && document.getElementById('noInvite').checked){
-      continue; // 청첩장 없음 체크 시 URL 무시
-    }
-    if(!val){
-      alert(`${f.label} 항목을 입력/선택해 주세요.`);
-      document.getElementById(f.id).focus();
-      return;
-    }
-  }
-
-  // ✅ 저장
-  const info={
-    inviteUrl:document.getElementById('inviteUrl').value,
-    noInvite:document.getElementById('noInvite').checked,
-    groomFather:document.getElementById('groomFather').value,
-    groomMother:document.getElementById('groomMother').value,
-    groomOrder:document.getElementById('groomOrder').value,
-    groomName:document.getElementById('groomName').value,
-    brideFather:document.getElementById('brideFather').value,
-    brideMother:document.getElementById('brideMother').value,
-    brideOrder:document.getElementById('brideOrder').value,
-    brideName:document.getElementById('brideName').value,
-    eventDate:document.getElementById('eventDate').value,
-    eventTime:document.getElementById('eventTime').value,
-    venueAddr:document.getElementById('venueAddr').value,
-    venueDetail:document.getElementById('venueDetail').value,
-    isSmallWedding:document.getElementById('isSmallWedding').value,
-    flowerOption:document.getElementById('flowerOption').value
-  };
-  localStorage.setItem('inviteInfo',JSON.stringify(info));
-  location.href='wedding_detail.html';
-});
-
-// 🟢 도로명 주소 검색
-function searchAddress(){
-  new daum.Postcode({
-    oncomplete: function(data) {
-      document.getElementById("venueAddr").value = data.roadAddress || data.address;
-    }
-  }).open();
-}
 </script>
 </body>
 </html>
