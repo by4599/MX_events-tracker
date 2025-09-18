@@ -22,7 +22,10 @@ h2{margin-top:0;font-size:18px}
 <div class="card">
   <h2>추가 정보 입력</h2>
 
-  <div class="row-inline"><label>임원 성함 *</label><input id="name" /></div>
+  <div class="row-inline">
+    <label for="name">임원 성함 *</label>
+    <input id="name" placeholder="예: 김철수" />
+  </div>
   <div class="row-inline">
     <label>임원측 *</label>
     <div>
@@ -30,21 +33,41 @@ h2{margin-top:0;font-size:18px}
       <label><input type="radio" name="parentSide" value="bride"> 신부측</label>
     </div>
   </div>
-  <div class="row-inline"><label>재직/퇴직 *</label>
-    <select id="empStatus"><option value="">선택</option><option>재직</option><option>퇴임</option></select>
+  <div class="row-inline">
+    <label for="empStatus">재직/퇴직 *</label>
+    <select id="empStatus">
+      <option value="">선택</option><option>재직</option><option>퇴임</option>
+    </select>
   </div>
-  <div class="row-inline"><label>근무 부서 *</label><input id="deptWhenEmployed" /></div>
-  <div class="row-inline"><label>직책 *</label><input id="currentJobTitle" /></div>
-  <div class="row-inline"><label>청탁금지법 *</label>
+  <div class="row-inline">
+    <label for="deptWhenEmployed">근무 부서 *</label>
+    <input id="deptWhenEmployed" placeholder="예: 무선사업부" />
+  </div>
+  <div class="row-inline">
+    <label for="currentJobTitle">직책 *</label>
+    <input id="currentJobTitle" placeholder="예: 전무" />
+  </div>
+  <div class="row-inline">
+    <label for="antiGraft">청탁금지법 *</label>
     <select id="antiGraft"><option value="">선택</option><option>대상</option><option>비대상</option></select>
   </div>
-  <div class="row-inline"><label>축의계좌 *</label><input id="bankNumber" /></div>
-  <div class="row-inline"><label>은행 *</label>
-    <select id="bankName"><option value="">선택</option><option>국민</option><option>신한</option><option>우리</option>
-      <option>하나</option><option>농협</option><option>기업</option></select>
+  <div class="row-inline">
+    <label for="bankNumber">축의계좌 *</label>
+    <input id="bankNumber" placeholder="예: 000-0000-0000-000" />
   </div>
-  <div class="row-inline"><label>연락처 *</label><input id="phone" placeholder="010-1234-5678" /></div>
-  <div class="row-inline"><label>계좌공개 *</label>
+  <div class="row-inline">
+    <label for="bankName">은행 *</label>
+    <select id="bankName">
+      <option value="">선택</option><option>국민</option><option>신한</option><option>우리</option>
+      <option>하나</option><option>농협</option><option>기업</option>
+    </select>
+  </div>
+  <div class="row-inline">
+    <label for="phone">연락처 *</label>
+    <input id="phone" placeholder="010-1234-5678" />
+  </div>
+  <div class="row-inline">
+    <label for="accountDisclosure">계좌공개 *</label>
     <select id="accountDisclosure"><option value="">선택</option><option>희망</option><option>비희망</option></select>
   </div>
 
@@ -78,16 +101,22 @@ document.getElementById('phone').addEventListener('input',(e)=>{
 // 🟢 미리보기
 document.getElementById('btnPreview').addEventListener('click', ()=>{
   const previewBox=document.getElementById('previewBox');
-  previewBox.textContent="📄 미리보기 생성 중...";
   previewBox.classList.remove('hidden');
 
-  // 단순히 로컬 데이터만 표시 (서버 X)
-  previewBox.textContent = `
-삼성전자 ${document.getElementById('deptWhenEmployed').value} ${document.getElementById('name').value} ${document.getElementById('currentJobTitle').value} ${invite.groomOrder||invite.brideOrder}결혼
-□ 일 시 : ${invite.eventDate} ${invite.eventTime}
-□ 장 소 : ${invite.venueDetail}
-(${invite.venueAddr})
-  `;
+  const dept = document.getElementById('deptWhenEmployed').value || "(부서 미입력)";
+  const name = document.getElementById('name').value || "(성함 미입력)";
+  const job  = document.getElementById('currentJobTitle').value || "(직책 미입력)";
+  const order= invite.groomOrder||invite.brideOrder||"(순서 미입력)";
+  const eventDate = invite.eventDate || "(날짜 없음)";
+  const eventTime = invite.eventTime || "";
+  const venue = invite.venueDetail || "(예식장 없음)";
+  const venueAddr = invite.venueAddr || "";
+
+  previewBox.textContent = 
+`삼성전자 ${dept} ${name} ${job} ${order}결혼
+□ 일 시 : ${eventDate} ${eventTime}
+□ 장 소 : ${venue}
+(${venueAddr})`;
 });
 
 // 🟢 제출
