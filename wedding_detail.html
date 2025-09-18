@@ -5,24 +5,45 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>추가 정보 입력</title>
 <style>
-body { font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif; margin:0; padding:16px; background:#f9f9f9; }
-.card { max-width:420px; margin:0 auto; background:#fff; padding:16px; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
-h2 { margin-top:0; font-size:18px; }
-.row-inline { display:flex; align-items:center; gap:6px; margin:8px 0; flex-wrap:wrap; }
-.row-inline label { flex:0 0 120px; font-size:14px; font-weight:600; }
-.row-inline input, .row-inline select { flex:1; min-width:0; padding:8px; font-size:14px; border:1px solid #ccc; border-radius:6px; }
-.btn { padding:10px 12px; border:0; border-radius:6px; cursor:pointer; font-weight:600; font-size:14px; }
-.btn.primary { background:#111; color:#fff; width:100%; margin-top:12px; }
-.preview { white-space:pre-wrap; border:1px solid #ddd; padding:12px; border-radius:12px; background:#fafafa; margin-top:12px; font-size:14px; }
-.hidden { display:none; }
-#msg { margin-top:12px; font-size:14px; }
+body{
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  margin:0;padding:16px;background:#f9f9f9;color:#111
+}
+.card{
+  max-width:420px;
+  margin:0 auto;background:#fff;padding:16px;
+  border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,0.1)
+}
+h2{margin-top:0;font-size:18px}
+.row-inline{
+  display:flex;align-items:center;gap:6px;margin:8px 0;
+  flex-wrap:wrap;
+}
+.row-inline label{
+  flex:0 0 120px;font-size:14px;font-weight:600
+}
+.row-inline input,.row-inline select{
+  flex:1;min-width:0;
+  padding:8px;font-size:14px;
+  border:1px solid #ccc;border-radius:6px
+}
+.btn{
+  padding:10px 12px;border:0;border-radius:6px;
+  cursor:pointer;font-weight:600;font-size:14px
+}
+.btn.primary{background:#111;color:#fff;width:100%;margin-top:12px}
+.preview{
+  white-space:pre-wrap;border:1px solid #ddd;padding:12px;
+  border-radius:12px;background:#fafafa;margin-top:12px;font-size:14px
+}
+.hidden{display:none}
 </style>
 </head>
 <body>
 <div class="card">
   <h2>추가 정보 입력</h2>
 
-  <div class="row-inline"><label for="name">임원 성함 *</label><input id="name" placeholder="예: 김철수"></div>
+  <div class="row-inline"><label for="name">임원 성함 *</label><input id="name" placeholder="예: 김석호"></div>
   <div class="row-inline">
     <label>임원측 *</label>
     <div>
@@ -35,15 +56,18 @@ h2 { margin-top:0; font-size:18px; }
     <select id="empStatus"><option value="">선택</option><option>재직</option><option>퇴임</option></select>
   </div>
   <div class="row-inline"><label for="deptWhenEmployed">근무 부서 *</label><input id="deptWhenEmployed" placeholder="예: 무선사업부"></div>
-  <div class="row-inline"><label for="currentJobTitle">직책 *</label><input id="currentJobTitle" placeholder="예: 전무"></div>
+  <div class="row-inline"><label for="currentJobTitle">직책 *</label><input id="currentJobTitle" placeholder="예: 상무"></div>
   <div class="row-inline">
     <label for="antiGraft">청탁금지법 *</label>
     <select id="antiGraft"><option value="">선택</option><option>대상</option><option>비대상</option></select>
   </div>
-  <div class="row-inline"><label for="bankNumber">축의계좌 *</label><input id="bankNumber" placeholder="000-0000-0000-000"></div>
+  <div class="row-inline"><label for="bankNumber">축의계좌 *</label><input id="bankNumber" placeholder="예: 000-0000-0000-00"></div>
   <div class="row-inline">
     <label for="bankName">은행 *</label>
-    <select id="bankName"><option value="">선택</option><option>국민</option><option>신한</option><option>우리</option><option>하나</option><option>농협</option><option>기업</option></select>
+    <select id="bankName">
+      <option value="">선택</option><option>국민</option><option>신한</option><option>우리</option>
+      <option>하나</option><option>농협</option><option>기업</option>
+    </select>
   </div>
   <div class="row-inline"><label for="phone">연락처 *</label><input id="phone" placeholder="010-1234-5678"></div>
   <div class="row-inline">
@@ -54,15 +78,14 @@ h2 { margin-top:0; font-size:18px; }
   <button class="btn primary" id="btnPreview">게시글 미리보기</button>
   <div id="previewBox" class="preview hidden"></div>
   <button class="btn primary" id="btnSubmit">제출</button>
-  <div id="msg"></div>
+  <div id="msg" class="preview hidden"></div>
 </div>
 
 <script>
-const ENDPOINT = "https://wedding-proxy.ini203-kim.workers.dev";
+const ENDPOINT="https://wedding-proxy.ini203-kim.workers.dev";
+const invite=JSON.parse(localStorage.getItem('inviteInfo')||'{}');
 
-const invite = JSON.parse(localStorage.getItem("inviteInfo")||"{}");
-
-// 전화번호 자동 하이픈
+// 연락처 자동 하이픈
 document.getElementById('phone').addEventListener('input',(e)=>{
   let num=e.target.value.replace(/\D/g,"");
   if(num.length===10){
@@ -73,65 +96,84 @@ document.getElementById('phone').addEventListener('input',(e)=>{
   e.target.value=num;
 });
 
-// 미리보기
-document.getElementById("btnPreview").addEventListener("click", ()=>{
-  const name=document.getElementById("name").value||"(성함 미입력)";
-  const dept=document.getElementById("deptWhenEmployed").value||"(부서)";
-  const job=document.getElementById("currentJobTitle").value||"(직책)";
-  const order=invite.groomOrder||invite.brideOrder||"(순서)";
-  const eventDate=invite.eventDate||"(날짜 없음)";
-  const eventTime=invite.eventTime||"";
-  const venue=invite.venue||"(예식장)";
-  const addr=invite.venueAddr||"";
+// 필수 입력 체크
+function validate(){
+  const req=[
+    "name","empStatus","deptWhenEmployed","currentJobTitle",
+    "antiGraft","bankNumber","bankName","phone","accountDisclosure"
+  ];
+  for(const id of req){
+    const el=document.getElementById(id);
+    if(!el.value){alert(id+" 입력 필수");return false;}
+  }
+  if(!document.querySelector('input[name="parentSide"]:checked')){
+    alert("임원측 선택 필수");return false;
+  }
+  return true;
+}
 
-  const preview=`삼성전자 ${dept} ${name} ${job} ${order}결혼
-□ 일 시 : ${eventDate} ${eventTime}
-□ 장 소 : ${venue}
-(${addr})`;
-
-  const box=document.getElementById("previewBox");
-  box.textContent=preview;
-  box.classList.remove("hidden");
-});
-
-// 제출
-document.getElementById("btnSubmit").addEventListener("click", async ()=>{
-  const msg=document.getElementById("msg");
-  msg.textContent="⏳ 제출 중...";
-  msg.style.color="black";
-
+// 미리보기 버튼
+document.getElementById('btnPreview').addEventListener('click',async()=>{
+  if(!validate()) return;
   const payload={
     ...invite,
-    name:document.getElementById("name").value,
-    empStatus:document.getElementById("empStatus").value,
-    deptWhenEmployed:document.getElementById("deptWhenEmployed").value,
-    currentJobTitle:document.getElementById("currentJobTitle").value,
-    antiGraft:document.getElementById("antiGraft").value,
-    bankNumber:document.getElementById("bankNumber").value,
-    bankName:document.getElementById("bankName").value,
-    phone:document.getElementById("phone").value,
-    accountDisclosure:document.getElementById("accountDisclosure").value,
-    parentSide:document.querySelector('input[name="parentSide"]:checked')?.value
+    name:document.getElementById('name').value,
+    parentSide:document.querySelector('input[name="parentSide"]:checked').value,
+    empStatus:document.getElementById('empStatus').value,
+    deptWhenEmployed:document.getElementById('deptWhenEmployed').value,
+    currentJobTitle:document.getElementById('currentJobTitle').value,
+    antiGraft:document.getElementById('antiGraft').value,
+    bankNumber:document.getElementById('bankNumber').value,
+    bankName:document.getElementById('bankName').value,
+    phone:document.getElementById('phone').value,
+    accountDisclosure:document.getElementById('accountDisclosure').value
   };
 
-  try {
-    const res=await fetch(ENDPOINT,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(payload)
-    });
-    if(!res.ok) throw new Error("서버 응답 오류");
+  try{
+    const res=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
     const data=await res.json();
     if(data.ok){
-      msg.textContent="✅ 신청이 완료되었습니다. 예식일 기준 2~3주 내 게시 예정입니다.";
-      msg.style.color="green";
+      document.getElementById('previewBox').innerHTML=data.previewHtml||data.preview;
+      document.getElementById('previewBox').classList.remove('hidden');
     }else{
-      msg.textContent="❌ 제출 실패: "+(data.error||"알 수 없는 오류");
-      msg.style.color="red";
+      alert("❌ 미리보기 오류: "+data.error);
     }
-  } catch(err){
-    msg.textContent="❌ 제출 실패: "+err.message;
-    msg.style.color="red";
+  }catch(err){
+    alert("❌ 미리보기 실패: "+err.message);
+  }
+});
+
+// 제출 버튼
+document.getElementById('btnSubmit').addEventListener('click',async()=>{
+  if(!validate()) return;
+  const payload={
+    ...invite,
+    name:document.getElementById('name').value,
+    parentSide:document.querySelector('input[name="parentSide"]:checked').value,
+    empStatus:document.getElementById('empStatus').value,
+    deptWhenEmployed:document.getElementById('deptWhenEmployed').value,
+    currentJobTitle:document.getElementById('currentJobTitle').value,
+    antiGraft:document.getElementById('antiGraft').value,
+    bankNumber:document.getElementById('bankNumber').value,
+    bankName:document.getElementById('bankName').value,
+    phone:document.getElementById('phone').value,
+    accountDisclosure:document.getElementById('accountDisclosure').value
+  };
+
+  const msg=document.getElementById('msg');
+  msg.classList.remove('hidden');
+  msg.innerText="⏳ 제출 중...";
+
+  try{
+    const res=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    const data=await res.json();
+    if(data.ok){
+      msg.innerText="✅ 신청이 완료되었습니다.\n경사의 경우 예식일 기준 2~3주 내에 게시 예정입니다.\n보다 빠른 게시 희망 시 경조사 담당자에게 연락 바랍니다.";
+    }else{
+      msg.innerText="❌ 제출 오류: "+data.error;
+    }
+  }catch(err){
+    msg.innerText="❌ 제출 실패: "+err.message;
   }
 });
 </script>
