@@ -13,8 +13,10 @@ input,select{width:100%;padding:8px;font-size:14px;border:1px solid #ccc;border-
 .row{display:flex;gap:6px}
 .btn{padding:10px 12px;border:0;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px}
 .btn.primary{background:#111;color:#fff;width:100%;margin-top:12px}
-.checkbox{margin:8px 0;font-size:14px;display:flex;align-items:center;gap:6px}
+.section{margin-top:16px;padding-top:12px;border-top:1px solid #eee}
 .msg{margin-top:8px;font-size:13px}
+.checkbox{display:flex;align-items:center;gap:6px;margin:8px 0;font-size:14px}
+.checkbox label{display:inline;margin:0}
 </style>
 </head>
 <body>
@@ -25,7 +27,7 @@ input,select{width:100%;padding:8px;font-size:14px;border:1px solid #ccc;border-
   <label for="inviteUrl">모바일 청첩장 URL</label>
   <input id="inviteUrl" placeholder="https://..." />
   <div class="checkbox">
-    <input type="checkbox" id="noInvite" style="margin:0;">
+    <input type="checkbox" id="noInvite">
     <label for="noInvite">모바일 청첩장 없음(수기 입력)</label>
   </div>
   <button class="btn primary" id="btnCheck">AI로 예식 정보 확인</button>
@@ -71,6 +73,7 @@ input,select{width:100%;padding:8px;font-size:14px;border:1px solid #ccc;border-
       <input type="date" id="eventDate" />
       <input type="time" id="eventTime" step="600" />
     </div>
+    <small>해외의 경우 현지시간으로 입력 바랍니다.</small>
     <label for="venueAddr">예식장 주소 *</label>
     <input id="venueAddr" placeholder="도로명 주소 검색" />
     <label for="venueDetail">예식장 세부 *</label>
@@ -123,17 +126,21 @@ document.getElementById('btnCheck').addEventListener('click', async ()=>{
   }
 });
 
-// 필수값 체크 + 다음 단계
+// 다음 단계 (필수값 검증 포함)
 document.getElementById('btnNext').addEventListener('click',()=>{
-  const requiredIds=["groomFather","groomMother","groomName",
-                     "brideFather","brideMother","brideName",
-                     "eventDate","eventTime","venueAddr","venueDetail"];
+  const requiredIds=[
+    "groomFather","groomMother","groomOrder","groomName",
+    "brideFather","brideMother","brideOrder","brideName",
+    "eventDate","eventTime","venueAddr","venueDetail"
+  ];
   for(const id of requiredIds){
-    if(!document.getElementById(id).value.trim()){
-      alert("❌ 필수 입력값("+id+")을 입력해주세요.");
+    const el=document.getElementById(id);
+    if(!el || !el.value.trim()){
+      alert("❌ 필수 입력값이 누락되었습니다: " + id);
       return;
     }
   }
+
   const info={
     inviteUrl:document.getElementById('inviteUrl').value,
     noInvite:document.getElementById('noInvite').checked,
