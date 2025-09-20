@@ -15,8 +15,8 @@ input,select{width:100%;padding:8px;font-size:14px;border:1px solid #ccc;border-
 .btn.primary{background:#111;color:#fff;width:100%;margin-top:12px}
 .section{margin-top:16px;padding-top:12px;border-top:1px solid #eee}
 .msg{margin-top:8px;font-size:13px}
-.checkbox{display:flex;align-items:center;gap:6px;margin:8px 0;font-size:14px}
-.checkbox label{display:inline;margin:0}
+.checkbox{display:flex;align-items:center;margin:8px 0;font-size:14px}
+.checkbox input{margin-right:6px;transform:scale(1.1)}
 </style>
 </head>
 <body>
@@ -28,7 +28,7 @@ input,select{width:100%;padding:8px;font-size:14px;border:1px solid #ccc;border-
   <input id="inviteUrl" placeholder="https://..." />
   <div class="checkbox">
     <input type="checkbox" id="noInvite">
-    <label for="noInvite">모바일 청첩장 없음(수기 입력)</label>
+    <label for="noInvite">모바일 청첩장 없음 (수기 입력)</label>
   </div>
   <button class="btn primary" id="btnCheck">AI로 예식 정보 확인</button>
   <div id="msg" class="msg"></div>
@@ -44,6 +44,7 @@ input,select{width:100%;padding:8px;font-size:14px;border:1px solid #ccc;border-
     <select id="groomOrder">
       <option value="">선택</option>
       <option>장남</option><option>차남</option><option>삼남</option>
+      <option>사남</option><option>오남</option>
     </select>
     <label for="groomName">신랑 성명 *</label>
     <input id="groomName" />
@@ -60,6 +61,7 @@ input,select{width:100%;padding:8px;font-size:14px;border:1px solid #ccc;border-
     <select id="brideOrder">
       <option value="">선택</option>
       <option>장녀</option><option>차녀</option><option>삼녀</option>
+      <option>사녀</option><option>오녀</option>
     </select>
     <label for="brideName">신부 성명 *</label>
     <input id="brideName" />
@@ -93,6 +95,22 @@ input,select{width:100%;padding:8px;font-size:14px;border:1px solid #ccc;border-
 
 <script>
 const ENDPOINT="https://wedding-proxy.ini203-kim.workers.dev";
+
+// 필수 입력 항목 매핑 (UI 라벨명과 연결)
+const requiredFields = [
+  {id:"groomFather", label:"신랑 아버지 성함"},
+  {id:"groomMother", label:"신랑 어머니 성함"},
+  {id:"groomOrder", label:"신랑 형제관계"},
+  {id:"groomName", label:"신랑 성명"},
+  {id:"brideFather", label:"신부 아버지 성함"},
+  {id:"brideMother", label:"신부 어머니 성함"},
+  {id:"brideOrder", label:"신부 형제관계"},
+  {id:"brideName", label:"신부 성명"},
+  {id:"eventDate", label:"예식 날짜"},
+  {id:"eventTime", label:"예식 시간"},
+  {id:"venueAddr", label:"예식장 주소"},
+  {id:"venueDetail", label:"예식장 세부"}
+];
 
 // AI 분석
 document.getElementById('btnCheck').addEventListener('click', async ()=>{
@@ -128,15 +146,10 @@ document.getElementById('btnCheck').addEventListener('click', async ()=>{
 
 // 다음 단계 (필수값 검증 포함)
 document.getElementById('btnNext').addEventListener('click',()=>{
-  const requiredIds=[
-    "groomFather","groomMother","groomOrder","groomName",
-    "brideFather","brideMother","brideOrder","brideName",
-    "eventDate","eventTime","venueAddr","venueDetail"
-  ];
-  for(const id of requiredIds){
-    const el=document.getElementById(id);
+  for(const field of requiredFields){
+    const el=document.getElementById(field.id);
     if(!el || !el.value.trim()){
-      alert("❌ 필수 입력값이 누락되었습니다: " + id);
+      alert("❌ 필수 입력값이 누락되었습니다: " + field.label);
       return;
     }
   }
