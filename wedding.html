@@ -172,6 +172,21 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   <button class="btn primary" id="btnCheck">AI로 예식 정보 확인</button>
   <div id="msg" class="msg"></div>
 
+  <!-- 디버그 UI -->
+  <div class="section" id="debugSection">
+    <div class="row" style="align-items:center;">
+      <label for="debugToggle" style="margin:0;">디버그 보기</label>
+      <input id="debugToggle" type="checkbox" style="margin-left:auto; width:18px; height:18px;" />
+    </div>
+    <div id="debugBox" class="hidden" style="margin-top:8px;">
+      <div class="row" style="gap:6px; margin-bottom:6px;">
+        <button class="btn" id="btnFillSample" type="button">샘플 URL 채우기</button>
+        <button class="btn" id="btnCopyApi" type="button" title="요청 URL 복사">요청 URL 복사</button>
+      </div>
+      <pre id="debugOut" style="white-space:pre-wrap; background:#0b1020; color:#d1e7ff; padding:10px; border-radius:8px; max-height:260px; overflow:auto;"></pre>
+    </div>
+  </div>
+
   <!-- 신랑측 -->
   <div class="section">
     <h3>신랑측</h3>
@@ -341,9 +356,12 @@ document.getElementById('btnCheck').addEventListener('click', async ()=>{
   if(!url){ msg.textContent="❌ 청첩장 URL을 입력하세요."; msg.style.color="red"; return; }
   msg.textContent="⏳ AI로 분석 중입니다..."; msg.style.color="#333";
   try{
-    const res=await fetch(ENDPOINT+"?action=extract&url="+encodeURIComponent(url));
+    const reqUrl = ENDPOINT+"?action=extract&url="+encodeURIComponent(url);
+    const res=await fetch(reqUrl);
     if(!res.ok) throw new Error("요청 실패");
     const data=await res.json();
+    // 원문 디버그 출력
+    debugPrint({ reqUrl, response: data });
     // 백엔드 래퍼({ ok, source, data }) 또는 평문 둘 다 대응
     const payload = (data && typeof data==='object' && 'data' in data) ? (data.data || {}) : (data || {});
     if(data.ok){
@@ -358,7 +376,6 @@ document.getElementById('btnCheck').addEventListener('click', async ()=>{
       setDateDisplay(payload.eventDate || "");
       setTimeDisplay(payload.eventTime || "");
       venueAddr.value=payload.venueAddr||"";
-      // venue(이름/홀명)은 '예식장 세부'에 매핑
       venueDetail.value=payload.venue||"";
       const src = data.source ? ` (source: ${data.source})` : "";
       msg.textContent="✅ AI로 예식 정보가 입력되었습니다. 확인 바랍니다."+src; msg.style.color="green";
@@ -367,6 +384,8 @@ document.getElementById('btnCheck').addEventListener('click', async ()=>{
     }
   }catch(err){
     msg.textContent="❌ 분석 실패: "+err.message; msg.style.color="red";
+    // 에러 디버그 출력
+    debugPrint({ error: String(err) });
   }
 });
 
@@ -654,6 +673,40 @@ function updateInviteMode(){
 }
 noInviteEl.addEventListener('change', updateInviteMode);
 updateInviteMode();
+
+/* ================== 디버그 출력/토글/도우미 ================== */
+const debugToggle = document.getElementById('debugToggle');
+const debugBox = document.getElementById('debugBox');
+const debugOut = document.getElementById('debugOut');
+const btnFillSample = document.getElementById('btnFillSample');
+const btnCopyApi = document.getElementById('btnCopyApi');
+
+debugToggle.addEventListener('change', ()=> {
+  debugBox.classList.toggle('hidden', !debugToggle.checked);
+});
+function debugPrint(obj){
+  if(!debugToggle.checked) return;
+  try{
+    const curr = debugOut.textContent ? debugOut.textContent + "\n\n" : "";
+    debugOut.textContent = curr + JSON.stringify(obj, null, 2);
+  }catch(_){
+    debugOut.textContent = String(obj);
+  }
+}
+btnFillSample.addEventListener('click', ()=>{
+  document.getElementById('inviteUrl').value = "https://toourguest.com/cards/20250914";
+});
+btnCopyApi.addEventListener('click', async ()=>{
+  const u = document.getElementById('inviteUrl').value.trim();
+  if(!u){ alert("URL을 먼저 입력하세요"); return; }
+  const reqUrl = ENDPOINT+"?action=extract&url="+encodeURIComponent(u);
+  try{
+    await navigator.clipboard.writeText(reqUrl);
+    alert("요청 URL을 클립보드에 복사했습니다.");
+  }catch(_){
+    prompt("아래 URL을 복사하세요:", reqUrl);
+  }
+});
 
 /* ================== 다음 단계 버튼 ================== */
 document.getElementById('btnNext').addEventListener('click', ()=>{
