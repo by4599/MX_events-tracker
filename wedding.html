@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="ko">
 <head>
@@ -107,31 +106,22 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 .cal-ym{ font-weight:800; font-size:18px; letter-spacing:.3px; }
 
 /* ================== 달력 요일/날짜 그리드 ================== */
-/* 요일 헤더: 글씨 키우고 주말 색상 적용 */
 .cal-head{
   display:grid; grid-template-columns:repeat(7,1fr); gap:4px;
   margin-bottom:6px; font-size:14px; font-weight:700; text-align:center;
 }
-.cal-head .sun{ color:#C82D2D; }  /* 일요일 */
-.cal-head .sat{ color:#142396; }  /* 토요일 */
+.cal-head .sun{ color:#C82D2D; }
+.cal-head .sat{ color:#142396; }
 
 .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
-
-/* 날짜 셀: 주말 색 적용 + 상태별 스타일 */
 .cal-day{
   padding:10px 0; text-align:center; border-radius:8px; border:1px solid transparent;
   cursor:pointer; background:#fff; color:#111; font-weight:600;
 }
 .cal-day:hover{ background:#f5f5f5; }
 .cal-day.out{ color:#bbb; cursor:default; background:transparent; }
-
-/* 오늘 테두리 강조 */
 .cal-day.today{ border-color:#111; }
-
-/* 선택 색(배경만), 글자색은 주말 색을 유지하도록 기본 상속 */
 .cal-day.sel{ background:#111; color:inherit; }
-
-/* 주말 색상 (일/토) — 선택/비선택 모두 유지 */
 .cal-day.sun{ color:#C82D2D !important; }
 .cal-day.sat{ color:#142396 !important; }
 
@@ -151,12 +141,12 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 }
 .time-item:hover{ background:#f5f5f5; }
 .time-item.sel{ background:#111; color:#fff; border-color:#111; }
-/* ADDED: 보조 안내문(흐린 글씨) */
-.hint {
-  color:#8a8a8a;       /* 회색 톤 */
-  font-size:12px;      /* 기존 텍스트보다 살짝 작게 */
-  margin-top:6px;      /* 위 요소와 간격 */
-  display:block;       /* 줄바꿈 처리 */
+.hint { color:#8a8a8a; font-size:12px; margin-top:6px; display:block; }
+
+/* visually hidden for a11y */
+.sr-only{
+  position:absolute !important; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
 }
 </style>
 </head>
@@ -172,9 +162,9 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 
   <!-- 수기 입력 토글 -->
   <div class="toggle-wrapper">
-    <span>모바일 청첩장 없음 (수기 입력)</span>
+    <span id="noInviteLabel">모바일 청첩장 없음 (수기 입력)</span>
     <label class="switch">
-      <input type="checkbox" id="noInvite" />
+      <input type="checkbox" id="noInvite" aria-labelledby="noInviteLabel" />
       <span class="slider"></span>
     </label>
   </div>
@@ -189,15 +179,15 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     <input id="groomFather" type="text" />
     <label for="groomMother">혼주 어머니 성함 *</label>
     <input id="groomMother" type="text" />
-    <label for="groomOrder">신랑 형제관계 *</label>
+    <label for="groomOrder" id="groomOrderLabel">신랑 형제관계 *</label>
     <select id="groomOrder" class="native-select--hidden" data-ui="custom-select">
       <option value="">선택</option>
       <option>장남</option><option>차남</option><option>삼남</option>
       <option>사남</option><option>오남</option>
     </select>
     <div class="cselect" data-for="groomOrder" aria-haspopup="listbox">
-      <button type="button" class="cselect__btn" aria-expanded="false">선택<span class="cselect__arrow"></span></button>
-      <div class="cselect__list" role="listbox"></div>
+      <button type="button" class="cselect__btn" id="groomOrderBtn" aria-expanded="false">선택<span class="cselect__arrow"></span></button>
+      <div class="cselect__list" role="listbox" aria-labelledby="groomOrderLabel groomOrderBtn"></div>
     </div>
     <label for="groomName">신랑 성명 *</label>
     <input id="groomName" type="text" />
@@ -210,15 +200,15 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     <input id="brideFather" type="text" />
     <label for="brideMother">혼주 어머니 성함 *</label>
     <input id="brideMother" type="text" />
-    <label for="brideOrder">신부 형제관계 *</label>
+    <label for="brideOrder" id="brideOrderLabel">신부 형제관계 *</label>
     <select id="brideOrder" class="native-select--hidden" data-ui="custom-select">
       <option value="">선택</option>
       <option>장녀</option><option>차녀</option><option>삼녀</option>
       <option>사녀</option><option>오녀</option>
     </select>
     <div class="cselect" data-for="brideOrder" aria-haspopup="listbox">
-      <button type="button" class="cselect__btn" aria-expanded="false">선택<span class="cselect__arrow"></span></button>
-      <div class="cselect__list" role="listbox"></div>
+      <button type="button" class="cselect__btn" id="brideOrderBtn" aria-expanded="false">선택<span class="cselect__arrow"></span></button>
+      <div class="cselect__list" role="listbox" aria-labelledby="brideOrderLabel brideOrderBtn"></div>
     </div>
     <label for="brideName">신부 성명 *</label>
     <input id="brideName" type="text" />
@@ -228,35 +218,26 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   <div class="section">
     <h3>예식 정보</h3>
 
-    <!-- 날짜/시간 값 저장용 -->
     <input type="hidden" id="eventDate" />
     <input type="hidden" id="eventTime" />
 
     <label>예식일시 *</label>
     <div class="row">
-      <!-- 날짜 표시 입력(읽기전용) -->
       <div class="field" style="flex:1;">
         <input id="eventDateDisplay" class="display-input" type="text" placeholder="YYYY.MM.DD" readonly />
-        <!-- 아이콘: C1(달력) -->
         <span class="input-icon" aria-hidden="true"
           style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23111%22 stroke-width=%221.6%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><rect x=%223%22 y=%224%22 width=%2218%22 height=%2217%22 rx=%222%22/><path d=%22M8 2v4M16 2v4M3 9h18%22/></svg>');"></span>
       </div>
-
-      <!-- 시간 표시 입력(읽기전용) -->
       <div class="field" style="flex:1;">
         <input id="eventTimeDisplay" class="display-input" type="text" placeholder="오전 12:30" readonly />
-        <!-- 아이콘: T1(시계) -->
         <span class="input-icon" aria-hidden="true"
           style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23111%22 stroke-width=%221.6%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><circle cx=%2212%22 cy=%2212%22 r=%229%22/><path d=%22M12 7v6l4 2%22/></svg>');"></span>
       </div>
     </div>
-    <!-- CHANGED: 기존 small 교체 -->
     <small class="hint">※ 해외의 경우 현지시간으로 입력 바랍니다.</small>
-
 
     <label for="venueAddr">예식장 주소 *</label>
     <input id="venueAddr" type="text" placeholder="도로명 주소 검색" readonly />
-
 
     <label for="venueDetail">예식장 세부 *</label>
     <input id="venueDetail" type="text" placeholder="예식장 이름/홀명" />
@@ -295,7 +276,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     </div>
   </div>
   <div class="picker__body">
-    <!-- 요일 헤더(일~토) — 주말 색상은 클래스 sun/sat로 지정 -->
     <div class="cal-head">
       <div class="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="sat">토</div>
     </div>
@@ -305,7 +285,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     <button class="picker__btn" id="dateCancel">취소</button>
     <button class="picker__btn primary" id="dateConfirm">확인</button>
   </div>
-  <!-- 내부 상태 -->
   <input type="hidden" id="tempDate" />
   <input type="hidden" id="calYear" /><input type="hidden" id="calMonth" />
   <div style="position:absolute; left:-9999px;" aria-live="polite" id="dateLive"></div>
@@ -318,10 +297,14 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     <div class="picker__title">시간 선택</div>
   </div>
   <div class="picker__body">
+    <!-- a11y labels -->
+    <span id="ampmGroupLabel" class="sr-only">오전/오후 선택</span>
+    <span id="hourGroupLabel" class="sr-only">시간(시) 선택</span>
+    <span id="minGroupLabel" class="sr-only">시간(분) 선택</span>
     <div class="time-wrap">
-      <div class="time-col time-col--ampm" id="ampmCol" aria-label="오전/오후"></div>
-      <div class="time-col" id="hourCol" aria-label="시"></div>
-      <div class="time-col" id="minCol" aria-label="분"></div>
+      <div class="time-col time-col--ampm" id="ampmCol" role="group" aria-labelledby="ampmGroupLabel"></div>
+      <div class="time-col" id="hourCol" role="group" aria-labelledby="hourGroupLabel"></div>
+      <div class="time-col" id="minCol" role="group" aria-labelledby="minGroupLabel"></div>
     </div>
   </div>
   <div class="picker__ftr">
@@ -361,20 +344,24 @@ document.getElementById('btnCheck').addEventListener('click', async ()=>{
     const res=await fetch(ENDPOINT+"?action=extract&url="+encodeURIComponent(url));
     if(!res.ok) throw new Error("요청 실패");
     const data=await res.json();
+    // 백엔드 래퍼({ ok, source, data }) 또는 평문 둘 다 대응
+    const payload = (data && typeof data==='object' && 'data' in data) ? (data.data || {}) : (data || {});
     if(data.ok){
-      groomFather.value=data.groomFather||"";
-      groomMother.value=data.groomMother||"";
-      groomOrder.value=data.groomOrder||"";
-      groomName.value=data.groomName||"";
-      brideFather.value=data.brideFather||"";
-      brideMother.value=data.brideMother||"";
-      brideOrder.value=data.brideOrder||"";
-      brideName.value=data.brideName||"";
-      setDateDisplay(data.eventDate || "");
-      setTimeDisplay(data.eventTime || "");
-      venueAddr.value=data.venueAddr||"";
-      venueDetail.value=data.venue||"";
-      msg.textContent="✅ AI로 예식 정보가 입력되었습니다. 확인 바랍니다."; msg.style.color="green";
+      groomFather.value=payload.groomFather||"";
+      groomMother.value=payload.groomMother||"";
+      groomOrder.value=payload.groomOrder||"";
+      groomName.value=payload.groomName||"";
+      brideFather.value=payload.brideFather||"";
+      brideMother.value=payload.brideMother||"";
+      brideOrder.value=payload.brideOrder||"";
+      brideName.value=payload.brideName||"";
+      setDateDisplay(payload.eventDate || "");
+      setTimeDisplay(payload.eventTime || "");
+      venueAddr.value=payload.venueAddr||"";
+      // venue(이름/홀명)은 '예식장 세부'에 매핑
+      venueDetail.value=payload.venue||"";
+      const src = data.source ? ` (source: ${data.source})` : "";
+      msg.textContent="✅ AI로 예식 정보가 입력되었습니다. 확인 바랍니다."+src; msg.style.color="green";
     }else{
       msg.textContent="❌ 분석 실패: "+(data.error||"Unknown"); msg.style.color="red";
     }
@@ -405,39 +392,32 @@ const tempDate = document.getElementById('tempDate');
 const dateYM = document.getElementById('dateYM');
 const dateSelectedText = document.getElementById('dateSelectedText');
 
-/* 유틸 */
 const pad = n => String(n).padStart(2,'0');
 const toIso = (y,m,d) => `${y}-${pad(m)}-${pad(d)}`;
 const pretty = iso => (iso ? iso.split('-').join('.'):'');
 
-/* 요일 한글(일~토)을 구함 — 타임존 영향 피하려고 (y,m,d)로 생성 */
 function weekdayK(y,m,d){
   const days = ['일','월','화','수','목','금','토'];
   return days[new Date(y, m-1, d).getDay()];
 }
-
-/* 주말 클래스 지정 — 요일 숫자 기준(0=일, 6=토) */
 function setWeekendClass(el, dow){
   if(dow === 0) el.classList.add('sun');
   if(dow === 6) el.classList.add('sat');
 }
-
-/** 달력 그리드 생성 */
 function renderCal(y, m, selectedIso){
   calYear.value=y; calMonth.value=m;
   dateYM.textContent = `${y}.${pad(m)}`;
   calGrid.innerHTML='';
 
   const first = new Date(y, m-1, 1);
-  const startDow = first.getDay();        // 0(일)~6(토)
+  const startDow = first.getDay();
   const daysInMonth = new Date(y, m, 0).getDate();
 
   const today = new Date();
   const todayIso = toIso(today.getFullYear(), today.getMonth()+1, today.getDate());
 
-  // 이전달 말일 일부 채우기: 날짜, 요일 계산 후 주말 클래스 지정
   for(let i=0;i<startDow;i++){
-    const d = new Date(y, m-1, 1 - (startDow - i)); // 이전달 날짜 객체
+    const d = new Date(y, m-1, 1 - (startDow - i));
     const div = document.createElement('div');
     div.className='cal-day out';
     div.textContent = String(d.getDate());
@@ -445,14 +425,13 @@ function renderCal(y, m, selectedIso){
     calGrid.appendChild(div);
   }
 
-  // 이번달
   for(let d=1; d<=daysInMonth; d++){
     const iso = toIso(y, m, d);
     const dow = new Date(y, m-1, d).getDay();
     const btn = document.createElement('button');
     btn.type='button'; btn.className='cal-day'; btn.textContent=String(d);
 
-    setWeekendClass(btn, dow);                 // 주말 색상 클래스 부여
+    setWeekendClass(btn, dow);
     if(iso===todayIso) btn.classList.add('today');
     if(selectedIso && iso===selectedIso) btn.classList.add('sel');
 
@@ -460,14 +439,12 @@ function renderCal(y, m, selectedIso){
       tempDate.value = iso;
       [...calGrid.querySelectorAll('.cal-day')].forEach(b=>b.classList.remove('sel'));
       btn.classList.add('sel');
-      // 선택 텍스트에 요일 추가
       dateSelectedText.textContent = `선택된 날짜: ${pretty(iso)}(${weekdayK(y,m,d)})`;
     });
 
     calGrid.appendChild(btn);
   }
 }
-
 document.getElementById('prevMonth').addEventListener('click', ()=>{
   let y=Number(calYear.value), m=Number(calMonth.value)-1; if(m<1){m=12;y--;}
   renderCal(y,m,tempDate.value||dateHidden.value||'');
@@ -476,7 +453,6 @@ document.getElementById('nextMonth').addEventListener('click', ()=>{
   let y=Number(calYear.value), m=Number(calMonth.value)+1; if(m>12){m=1;y++;}
   renderCal(y,m,tempDate.value||dateHidden.value||'');
 });
-
 document.getElementById('dateCancel').addEventListener('click', closePicker);
 document.getElementById('dateConfirm').addEventListener('click', ()=>{
   const iso = tempDate.value;
@@ -485,15 +461,12 @@ document.getElementById('dateConfirm').addEventListener('click', ()=>{
     dateHidden.value = iso;
     dateDisplay.value = pretty(iso);
     dateDisplay.removeAttribute('aria-invalid');
-    // 확인 시에도 보조 라벨에 요일 표시 유지
     dateSelectedText.textContent = `선택된 날짜: ${pretty(iso)}(${weekdayK(yy,mm,dd)})`;
   }else{
     dateDisplay.setAttribute('aria-invalid','true');
   }
   closePicker();
 });
-
-/** 날짜 표시 필드 값 세팅 */
 function setDateDisplay(iso){
   dateHidden.value = iso || '';
   if(iso){
@@ -505,8 +478,6 @@ function setDateDisplay(iso){
     dateSelectedText.textContent = '';
   }
 }
-
-/** 날짜 필드 클릭 시 달력 오픈 */
 dateDisplay.addEventListener('click', ()=>{
   openPicker(datePicker);
   const base = dateHidden.value ? new Date(dateHidden.value) : new Date();
@@ -524,11 +495,10 @@ dateDisplay.addEventListener('click', ()=>{
 const ampmCol = document.getElementById('ampmCol');
 const hourCol = document.getElementById('hourCol');
 const minCol  = document.getElementById('minCol');
-const tempHour = document.getElementById('tempHour'); // 12시간제(문자)
-const tempMin  = document.getElementById('tempMin');  // "00".."50"
+const tempHour = document.getElementById('tempHour');
+const tempMin  = document.getElementById('tempMin');
 let tempAmpm = '오전';
 
-/* 24↔12 변환 */
 function to12h(h24){
   const n = parseInt(h24,10);
   if(isNaN(n)) return {ampm:'오전', h:'12'};
@@ -543,10 +513,7 @@ function to24h(ampm, h12){
   else{ if(n<12) n+=12; }
   return String(n).padStart(2,'0');
 }
-
-/* 시간 컬럼 렌더 */
 function renderTimeCols(selAmpm='오전', selH='12', selM='00'){
-  // AM/PM
   ampmCol.innerHTML='';
   ['오전','오후'].forEach(v=>{
     const b=document.createElement('button'); b.type='button'; b.className='time-item'; b.textContent=v; b.dataset.v=v;
@@ -557,7 +524,6 @@ function renderTimeCols(selAmpm='오전', selH='12', selM='00'){
     ampmCol.appendChild(b);
   });
 
-  // 시(01~12)
   hourCol.innerHTML='';
   for(let h=1; h<=12; h++){
     const v=String(h).padStart(2,'0');
@@ -571,7 +537,6 @@ function renderTimeCols(selAmpm='오전', selH='12', selM='00'){
     if(v===selH) queueMicrotask(()=>b.scrollIntoView({block:'center'}));
   }
 
-  // 분(10분 단위)
   minCol.innerHTML='';
   ['00','10','20','30','40','50'].forEach(v=>{
     const b=document.createElement('button'); b.type='button'; b.className='time-item'; b.textContent=v; b.dataset.v=v;
@@ -584,8 +549,6 @@ function renderTimeCols(selAmpm='오전', selH='12', selM='00'){
     if(v===selM) queueMicrotask(()=>b.scrollIntoView({block:'center'}));
   });
 }
-
-/* 시간 표시 필드 클릭 */
 timeDisplay.addEventListener('click', ()=>{
   openPicker(timePicker);
   const v = timeHidden.value;
@@ -597,23 +560,20 @@ timeDisplay.addEventListener('click', ()=>{
   tempHour.value=h; tempMin.value=m;
   renderTimeCols(tempAmpm, h, m);
 });
-
 document.getElementById('timeCancel').addEventListener('click', closePicker);
 document.getElementById('timeConfirm').addEventListener('click', ()=>{
   const h12=tempHour.value, m=tempMin.value;
   if(h12 && m){
     const hh = to24h(tempAmpm, h12);
     const val = `${hh}:${m}`;
-    timeHidden.value = val;                        // 저장: 24시간
-    timeDisplay.value = `${tempAmpm} ${h12}:${m}`; // 표시: 12시간
+    timeHidden.value = val;
+    timeDisplay.value = `${tempAmpm} ${h12}:${m}`;
     timeDisplay.removeAttribute('aria-invalid');
   }else{
     timeDisplay.setAttribute('aria-invalid','true');
   }
   closePicker();
 });
-
-/** 외부에서 시간 값 세팅(24시간 "HH:MM") */
 function setTimeDisplay(v){
   v = (v||'').trim();
   if(/^\d{2}:\d{2}$/.test(v)){
@@ -715,8 +675,8 @@ document.getElementById('btnNext').addEventListener('click', ()=>{
     brideMother:document.getElementById('brideMother').value,
     brideOrder:document.getElementById('brideOrder').value,
     brideName:document.getElementById('brideName').value,
-    eventDate:document.getElementById('eventDate').value,  // YYYY-MM-DD
-    eventTime:document.getElementById('eventTime').value,  // HH:MM (24h)
+    eventDate:document.getElementById('eventDate').value,
+    eventTime:document.getElementById('eventTime').value,
     venueAddr:document.getElementById('venueAddr').value,
     venueDetail:document.getElementById('venueDetail').value,
     isSmallWedding:document.getElementById('isSmallWeddingInput').value,
@@ -729,16 +689,13 @@ document.getElementById('btnNext').addEventListener('click', ()=>{
 <!-- Daum Postcode API -->
 <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 <script>
-  // 주소 입력창 클릭 시 팝업 열기
   document.getElementById('venueAddr').addEventListener('click', function(){
     new daum.Postcode({
       oncomplete: function(data) {
-        // 선택된 주소를 입력창에 넣기
         document.getElementById('venueAddr').value = data.address;
       }
     }).open();
   });
 </script>
-
 </body>
 </html>
