@@ -121,7 +121,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 .cal-day:hover{ background:#f5f5f5; }
 .cal-day.out{ color:#bbb; cursor:default; background:transparent; }
 .cal-day.today{ border-color:#111; }
-.cal-day.sel{ background:#111; color:inherit; }
+.cal-day.sel{ background:#111; color:#fff; } /* CHANGED: 선택된 날짜 글씨를 흰색으로 */
 .cal-day.sun{ color:#C82D2D !important; }
 .cal-day.sat{ color:#142396 !important; }
 
@@ -374,7 +374,7 @@ document.getElementById('btnCheck').addEventListener('click', async ()=>{
       brideOrder.value=payload.brideOrder||"";
       brideName.value=payload.brideName||"";
       setDateDisplay(payload.eventDate || "");
-      setTimeDisplay(payload.eventTime || "");
+      setTimeDisplay(payload.eventTime || payload.time || "");
       venueAddr.value=payload.venueAddr||"";
       venueDetail.value=payload.venue||"";
       const src = data.source ? ` (source: ${data.source})` : "";
@@ -593,16 +593,58 @@ document.getElementById('timeConfirm').addEventListener('click', ()=>{
   }
   closePicker();
 });
+/* 다양한 시간 문자열을 24시간 HH:MM으로 정규화 */
+function normalizeToHHMM(raw){
+  if(!raw) return '';
+  let s = String(raw).trim()
+    .replace(/\s+/g,' ')
+    .replace(/시/g,':')
+    .replace(/분/g,'')
+    .replace(/\.00\b/g,':00');
+
+  if(/^\d{3,4}$/.test(s) && !s.includes(':')){
+    const mm = s.slice(-2), hh = s.slice(0, s.length-2);
+    s = `${hh}:${mm}`;
+  }
+
+  const hms = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  const ap  = s.match(/^(오전|오후|AM|PM|am|pm)\s*(\d{1,2})[:：](\d{2})$/);
+
+  if(ap){
+    const ampm = ap[1].toLowerCase();
+    let h12 = parseInt(ap[2],10);
+    const mm = ap[3];
+    if(ampm==='오전' || ampm==='am'){
+      if(h12===12) h12 = 0;
+    }else{
+      if(h12<12) h12 += 12;
+    }
+    return `${String(h12).padStart(2,'0')}:${mm}`;
+  }
+
+  if(hms){
+    let hh = parseInt(hms[1],10);
+    const mm = hms[2];
+    if(hh>24) hh = hh % 24;
+    return `${String(hh).padStart(2,'0')}:${mm}`;
+  }
+  return '';
+}
+
+/* 외부에서 시간 값 세팅 — 정규화 후 바인딩 */
 function setTimeDisplay(v){
-  v = (v||'').trim();
-  if(/^\d{2}:\d{2}$/.test(v)){
-    timeHidden.value = v;
-    const [hh,mm] = v.split(':'); const t=to12h(hh);
+  const norm = normalizeToHHMM(v);
+  if(norm){
+    timeHidden.value = norm;
+    const [hh,mm] = norm.split(':'); const t=to12h(hh);
     timeDisplay.value = `${t.ampm} ${t.h}:${mm}`;
+    timeDisplay.removeAttribute('aria-invalid');
   }else{
-    timeHidden.value = ''; timeDisplay.value = '';
+    timeHidden.value = '';
+    timeDisplay.value = '';
   }
 }
+
 
 /* ================== 커스텀 셀렉트 증강 ================== */
 function enhanceSelect(selectEl){
