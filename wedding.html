@@ -114,6 +114,8 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 .cal-head .sat{ color:#142396; }
 
 .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+
+/* 날짜 셀 */
 .cal-day{
   padding:10px 0; text-align:center; border-radius:8px; border:1px solid transparent;
   cursor:pointer; background:#fff; color:#111; font-weight:600;
@@ -121,7 +123,9 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 .cal-day:hover{ background:#f5f5f5; }
 .cal-day.out{ color:#bbb; cursor:default; background:transparent; }
 .cal-day.today{ border-color:#111; }
-.cal-day.sel{ background:#111; color:#fff; } /* CHANGED: 선택된 날짜 글씨를 흰색으로 */
+
+/* 선택 상태: 주말 색상보다 우선 적용 */
+.cal-day.sel{ background:#111; color:#fff !important; }
 .cal-day.sun{ color:#C82D2D !important; }
 .cal-day.sat{ color:#142396 !important; }
 
@@ -141,9 +145,11 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 }
 .time-item:hover{ background:#f5f5f5; }
 .time-item.sel{ background:#111; color:#fff; border-color:#111; }
+
+/* 보조 안내문 */
 .hint { color:#8a8a8a; font-size:12px; margin-top:6px; display:block; }
 
-/* visually hidden for a11y */
+/* a11y */
 .sr-only{
   position:absolute !important; width:1px; height:1px; padding:0; margin:-1px;
   overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
@@ -172,21 +178,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   <button class="btn primary" id="btnCheck">AI로 예식 정보 확인</button>
   <div id="msg" class="msg"></div>
 
-  <!-- 디버그 UI -->
-  <div class="section" id="debugSection">
-    <div class="row" style="align-items:center;">
-      <label for="debugToggle" style="margin:0;">디버그 보기</label>
-      <input id="debugToggle" type="checkbox" style="margin-left:auto; width:18px; height:18px;" />
-    </div>
-    <div id="debugBox" class="hidden" style="margin-top:8px;">
-      <div class="row" style="gap:6px; margin-bottom:6px;">
-        <button class="btn" id="btnFillSample" type="button">샘플 URL 채우기</button>
-        <button class="btn" id="btnCopyApi" type="button" title="요청 URL 복사">요청 URL 복사</button>
-      </div>
-      <pre id="debugOut" style="white-space:pre-wrap; background:#0b1020; color:#d1e7ff; padding:10px; border-radius:8px; max-height:260px; overflow:auto;"></pre>
-    </div>
-  </div>
-
   <!-- 신랑측 -->
   <div class="section">
     <h3>신랑측</h3>
@@ -194,16 +185,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     <input id="groomFather" type="text" />
     <label for="groomMother">혼주 어머니 성함 *</label>
     <input id="groomMother" type="text" />
-    <label for="groomOrder" id="groomOrderLabel">신랑 형제관계 *</label>
-    <select id="groomOrder" class="native-select--hidden" data-ui="custom-select">
-      <option value="">선택</option>
-      <option>장남</option><option>차남</option><option>삼남</option>
-      <option>사남</option><option>오남</option>
-    </select>
-    <div class="cselect" data-for="groomOrder" aria-haspopup="listbox">
-      <button type="button" class="cselect__btn" id="groomOrderBtn" aria-expanded="false">선택<span class="cselect__arrow"></span></button>
-      <div class="cselect__list" role="listbox" aria-labelledby="groomOrderLabel groomOrderBtn"></div>
-    </div>
     <label for="groomName">신랑 성명 *</label>
     <input id="groomName" type="text" />
   </div>
@@ -215,16 +196,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     <input id="brideFather" type="text" />
     <label for="brideMother">혼주 어머니 성함 *</label>
     <input id="brideMother" type="text" />
-    <label for="brideOrder" id="brideOrderLabel">신부 형제관계 *</label>
-    <select id="brideOrder" class="native-select--hidden" data-ui="custom-select">
-      <option value="">선택</option>
-      <option>장녀</option><option>차녀</option><option>삼녀</option>
-      <option>사녀</option><option>오녀</option>
-    </select>
-    <div class="cselect" data-for="brideOrder" aria-haspopup="listbox">
-      <button type="button" class="cselect__btn" id="brideOrderBtn" aria-expanded="false">선택<span class="cselect__arrow"></span></button>
-      <div class="cselect__list" role="listbox" aria-labelledby="brideOrderLabel brideOrderBtn"></div>
-    </div>
     <label for="brideName">신부 성명 *</label>
     <input id="brideName" type="text" />
   </div>
@@ -233,6 +204,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   <div class="section">
     <h3>예식 정보</h3>
 
+    <!-- 저장용 hidden -->
     <input type="hidden" id="eventDate" />
     <input type="hidden" id="eventTime" />
 
@@ -243,6 +215,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
         <span class="input-icon" aria-hidden="true"
           style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23111%22 stroke-width=%221.6%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><rect x=%223%22 y=%224%22 width=%2218%22 height=%2217%22 rx=%222%22/><path d=%22M8 2v4M16 2v4M3 9h18%22/></svg>');"></span>
       </div>
+
       <div class="field" style="flex:1;">
         <input id="eventTimeDisplay" class="display-input" type="text" placeholder="오전 12:30" readonly />
         <span class="input-icon" aria-hidden="true"
@@ -275,7 +248,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   <button class="btn primary" id="btnNext">추가 정보 입력</button>
 </div>
 
-<!-- ================== 오버레이 ================== -->
+<!-- ================== 오버레이(달력/시간 모달은 이전처럼 동작) ================== -->
 <div id="pickerBackdrop" class="picker-backdrop"></div>
 
 <!-- 날짜 피커 -->
@@ -312,7 +285,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     <div class="picker__title">시간 선택</div>
   </div>
   <div class="picker__body">
-    <!-- a11y labels -->
     <span id="ampmGroupLabel" class="sr-only">오전/오후 선택</span>
     <span id="hourGroupLabel" class="sr-only">시간(시) 선택</span>
     <span id="minGroupLabel" class="sr-only">시간(분) 선택</span>
@@ -337,11 +309,9 @@ const ENDPOINT="https://wedding-proxy.ini203-kim.workers.dev";
 const requiredFields = [
   {id:"groomFather", label:"신랑 아버지 성함"},
   {id:"groomMother", label:"신랑 어머니 성함"},
-  {id:"groomOrder", label:"신랑 형제관계"},
   {id:"groomName", label:"신랑 성명"},
   {id:"brideFather", label:"신부 아버지 성함"},
   {id:"brideMother", label:"신부 어머니 성함"},
-  {id:"brideOrder", label:"신부 형제관계"},
   {id:"brideName", label:"신부 성명"},
   {id:"eventDate", label:"예식 날짜"},
   {id:"eventTime", label:"예식 시간"},
@@ -360,32 +330,34 @@ document.getElementById('btnCheck').addEventListener('click', async ()=>{
     const res=await fetch(reqUrl);
     if(!res.ok) throw new Error("요청 실패");
     const data=await res.json();
-    // 원문 디버그 출력
-    debugPrint({ reqUrl, response: data });
-    // 백엔드 래퍼({ ok, source, data }) 또는 평문 둘 다 대응
+    // 백엔드 래퍼({ ok, source, data }) 또는 평문 대응
     const payload = (data && typeof data==='object' && 'data' in data) ? (data.data || {}) : (data || {});
     if(data.ok){
       groomFather.value=payload.groomFather||"";
       groomMother.value=payload.groomMother||"";
-      groomOrder.value=payload.groomOrder||"";
       groomName.value=payload.groomName||"";
       brideFather.value=payload.brideFather||"";
       brideMother.value=payload.brideMother||"";
-      brideOrder.value=payload.brideOrder||"";
       brideName.value=payload.brideName||"";
-      setDateDisplay(payload.eventDate || "");
-      setTimeDisplay(payload.eventTime || payload.time || "");
+
+      /* ✅ 한국어 자연어에서도 날짜/시간 추출 */
+      const dateRaw = payload.eventDate || payload.date || "";
+      const timeRaw = payload.eventTime || payload.time || "";
+      const dtFromTime = extractDateAndTimeKR(timeRaw);
+      const dtFromDate = extractDateAndTimeKR(dateRaw);
+      const finalDate = dtFromTime.date || dtFromDate.date || dateRaw || "";
+      const finalTime = normalizeToHHMM(timeRaw) || dtFromTime.time || normalizeToHHMM(dtFromDate.time||"") || "";
+      setDateDisplay(finalDate);
+      setTimeDisplay(finalTime);
+
       venueAddr.value=payload.venueAddr||"";
       venueDetail.value=payload.venue||"";
-      const src = data.source ? ` (source: ${data.source})` : "";
-      msg.textContent="✅ AI로 예식 정보가 입력되었습니다. 확인 바랍니다."+src; msg.style.color="green";
+      msg.textContent="✅ AI로 예식 정보가 입력되었습니다. 확인 바랍니다."; msg.style.color="green";
     }else{
       msg.textContent="❌ 분석 실패: "+(data.error||"Unknown"); msg.style.color="red";
     }
   }catch(err){
     msg.textContent="❌ 분석 실패: "+err.message; msg.style.color="red";
-    // 에러 디버그 출력
-    debugPrint({ error: String(err) });
   }
 });
 
@@ -397,7 +369,6 @@ const dateDisplay = document.getElementById('eventDateDisplay');
 const timeDisplay = document.getElementById('eventTimeDisplay');
 const dateHidden = document.getElementById('eventDate');
 const timeHidden = document.getElementById('eventTime');
-
 function openPicker(el){ backdrop.style.display='block'; el.style.display='block'; }
 function closePicker(){ backdrop.style.display='none'; datePicker.style.display='none'; timePicker.style.display='none'; }
 backdrop.addEventListener('click', closePicker);
@@ -593,7 +564,8 @@ document.getElementById('timeConfirm').addEventListener('click', ()=>{
   }
   closePicker();
 });
-/* 다양한 시간 문자열을 24시간 HH:MM으로 정규화 */
+
+/* ================== 시간 정규화/자연어 파서 ================== */
 function normalizeToHHMM(raw){
   if(!raw) return '';
   let s = String(raw).trim()
@@ -602,23 +574,21 @@ function normalizeToHHMM(raw){
     .replace(/분/g,'')
     .replace(/\.00\b/g,':00');
 
+  // 1300 -> 13:00
   if(/^\d{3,4}$/.test(s) && !s.includes(':')){
     const mm = s.slice(-2), hh = s.slice(0, s.length-2);
     s = `${hh}:${mm}`;
   }
 
   const hms = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
-  const ap  = s.match(/^(오전|오후|AM|PM|am|pm)\s*(\d{1,2})[:：](\d{2})$/);
+  const ap  = s.match(/^(오전|오후|AM|PM|am|pm)\s*(\d{1,2})(?::|시)?\s*(\d{2})?$/);
 
   if(ap){
     const ampm = ap[1].toLowerCase();
     let h12 = parseInt(ap[2],10);
-    const mm = ap[3];
-    if(ampm==='오전' || ampm==='am'){
-      if(h12===12) h12 = 0;
-    }else{
-      if(h12<12) h12 += 12;
-    }
+    const mm = ap[3] || '00';
+    if(ampm==='오전' || ampm==='am'){ if(h12===12) h12=0; }
+    else { if(h12<12) h12+=12; }
     return `${String(h12).padStart(2,'0')}:${mm}`;
   }
 
@@ -631,7 +601,38 @@ function normalizeToHHMM(raw){
   return '';
 }
 
-/* 외부에서 시간 값 세팅 — 정규화 후 바인딩 */
+function extractDateAndTimeKR(raw){
+  const out = { date:'', time:'' };
+  if(!raw) return out;
+  const s = String(raw).trim();
+  // "2025년 9월 14일 일요일 오후 1시 30분" 등
+  const re = /(?:(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일)?(?:\s*[일월화수목금토]요일)?(?:\s*(오전|오후|AM|PM|am|pm)?\s*(\d{1,2})(?:\s*시)?(?:\s*(\d{1,2})\s*분?)?)?/;
+  const m = s.match(re);
+  if(m){
+    const [, yy, mm, dd, ap, hStr, minStr] = m;
+    if(yy && mm && dd){
+      out.date = `${yy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+    }
+    if(hStr){
+      const mm2 = minStr?String(minStr).padStart(2,'0'):'00';
+      if(ap){
+        let h = parseInt(hStr,10)||0;
+        const apLow = ap.toLowerCase();
+        if(apLow==='오전'||apLow==='am'){ if(h===12) h=0; } else { if(h<12) h+=12; }
+        out.time = `${String(h).padStart(2,'0')}:${mm2}`;
+      }else{
+        out.time = normalizeToHHMM(`${hStr}:${mm2}`);
+      }
+    }
+  }
+  if(!out.time){
+    const t = normalizeToHHMM(s);
+    if(t) out.time = t;
+  }
+  return out;
+}
+
+/** 외부에서 시간 값 세팅(24시간 "HH:MM") */
 function setTimeDisplay(v){
   const norm = normalizeToHHMM(v);
   if(norm){
@@ -640,11 +641,9 @@ function setTimeDisplay(v){
     timeDisplay.value = `${t.ampm} ${t.h}:${mm}`;
     timeDisplay.removeAttribute('aria-invalid');
   }else{
-    timeHidden.value = '';
-    timeDisplay.value = '';
+    timeHidden.value = ''; timeDisplay.value = '';
   }
 }
-
 
 /* ================== 커스텀 셀렉트 증강 ================== */
 function enhanceSelect(selectEl){
@@ -716,40 +715,6 @@ function updateInviteMode(){
 noInviteEl.addEventListener('change', updateInviteMode);
 updateInviteMode();
 
-/* ================== 디버그 출력/토글/도우미 ================== */
-const debugToggle = document.getElementById('debugToggle');
-const debugBox = document.getElementById('debugBox');
-const debugOut = document.getElementById('debugOut');
-const btnFillSample = document.getElementById('btnFillSample');
-const btnCopyApi = document.getElementById('btnCopyApi');
-
-debugToggle.addEventListener('change', ()=> {
-  debugBox.classList.toggle('hidden', !debugToggle.checked);
-});
-function debugPrint(obj){
-  if(!debugToggle.checked) return;
-  try{
-    const curr = debugOut.textContent ? debugOut.textContent + "\n\n" : "";
-    debugOut.textContent = curr + JSON.stringify(obj, null, 2);
-  }catch(_){
-    debugOut.textContent = String(obj);
-  }
-}
-btnFillSample.addEventListener('click', ()=>{
-  document.getElementById('inviteUrl').value = "https://toourguest.com/cards/20250914";
-});
-btnCopyApi.addEventListener('click', async ()=>{
-  const u = document.getElementById('inviteUrl').value.trim();
-  if(!u){ alert("URL을 먼저 입력하세요"); return; }
-  const reqUrl = ENDPOINT+"?action=extract&url="+encodeURIComponent(u);
-  try{
-    await navigator.clipboard.writeText(reqUrl);
-    alert("요청 URL을 클립보드에 복사했습니다.");
-  }catch(_){
-    prompt("아래 URL을 복사하세요:", reqUrl);
-  }
-});
-
 /* ================== 다음 단계 버튼 ================== */
 document.getElementById('btnNext').addEventListener('click', ()=>{
   for(const field of requiredFields){
@@ -764,14 +729,12 @@ document.getElementById('btnNext').addEventListener('click', ()=>{
     noInvite:document.getElementById('noInvite').checked,
     groomFather:document.getElementById('groomFather').value,
     groomMother:document.getElementById('groomMother').value,
-    groomOrder:document.getElementById('groomOrder').value,
     groomName:document.getElementById('groomName').value,
     brideFather:document.getElementById('brideFather').value,
     brideMother:document.getElementById('brideMother').value,
-    brideOrder:document.getElementById('brideOrder').value,
     brideName:document.getElementById('brideName').value,
-    eventDate:document.getElementById('eventDate').value,
-    eventTime:document.getElementById('eventTime').value,
+    eventDate:document.getElementById('eventDate').value,  // YYYY-MM-DD
+    eventTime:document.getElementById('eventTime').value,  // HH:MM (24h)
     venueAddr:document.getElementById('venueAddr').value,
     venueDetail:document.getElementById('venueDetail').value,
     isSmallWedding:document.getElementById('isSmallWeddingInput').value,
@@ -781,6 +744,7 @@ document.getElementById('btnNext').addEventListener('click', ()=>{
   location.href='wedding_detail.html';
 });
 </script>
+
 <!-- Daum Postcode API -->
 <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 <script>
