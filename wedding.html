@@ -185,6 +185,16 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     <input id="groomFather" type="text" />
     <label for="groomMother">혼주 어머니 성함 *</label>
     <input id="groomMother" type="text" />
+    <label for="groomOrder" id="groomOrderLabel">신랑 형제관계 *</label>
+    <select id="groomOrder" class="native-select--hidden" data-ui="custom-select">
+      <option value="">선택</option>
+      <option>장남</option><option>차남</option><option>삼남</option>
+      <option>사남</option><option>오남</option>
+    </select>
+    <div class="cselect" data-for="groomOrder" aria-haspopup="listbox">
+      <button type="button" class="cselect__btn" id="groomOrderBtn" aria-expanded="false">선택<span class="cselect__arrow"></span></button>
+      <div class="cselect__list" role="listbox" aria-labelledby="groomOrderLabel groomOrderBtn"></div>
+    </div>
     <label for="groomName">신랑 성명 *</label>
     <input id="groomName" type="text" />
   </div>
@@ -196,6 +206,16 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     <input id="brideFather" type="text" />
     <label for="brideMother">혼주 어머니 성함 *</label>
     <input id="brideMother" type="text" />
+    <label for="brideOrder" id="brideOrderLabel">신부 형제관계 *</label>
+    <select id="brideOrder" class="native-select--hidden" data-ui="custom-select">
+      <option value="">선택</option>
+      <option>장녀</option><option>차녀</option><option>삼녀</option>
+      <option>사녀</option><option>오녀</option>
+    </select>
+    <div class="cselect" data-for="brideOrder" aria-haspopup="listbox">
+      <button type="button" class="cselect__btn" id="brideOrderBtn" aria-expanded="false">선택<span class="cselect__arrow"></span></button>
+      <div class="cselect__list" role="listbox" aria-labelledby="brideOrderLabel brideOrderBtn"></div>
+    </div>
     <label for="brideName">신부 성명 *</label>
     <input id="brideName" type="text" />
   </div>
@@ -309,9 +329,11 @@ const ENDPOINT="https://wedding-proxy.ini203-kim.workers.dev";
 const requiredFields = [
   {id:"groomFather", label:"신랑 아버지 성함"},
   {id:"groomMother", label:"신랑 어머니 성함"},
+  {id:"groomOrder", label:"신랑 형제관계"},
   {id:"groomName", label:"신랑 성명"},
   {id:"brideFather", label:"신부 아버지 성함"},
   {id:"brideMother", label:"신부 어머니 성함"},
+  {id:"brideOrder", label:"신부 형제관계"},
   {id:"brideName", label:"신부 성명"},
   {id:"eventDate", label:"예식 날짜"},
   {id:"eventTime", label:"예식 시간"},
@@ -335,9 +357,11 @@ document.getElementById('btnCheck').addEventListener('click', async ()=>{
     if(data.ok){
       groomFather.value=payload.groomFather||"";
       groomMother.value=payload.groomMother||"";
+      groomOrder.value=payload.groomOrder||"";
       groomName.value=payload.groomName||"";
       brideFather.value=payload.brideFather||"";
       brideMother.value=payload.brideMother||"";
+      brideOrder.value=payload.brideOrder||"";
       brideName.value=payload.brideName||"";
 
       /* ✅ 한국어 자연어에서도 날짜/시간 추출 */
@@ -729,9 +753,11 @@ document.getElementById('btnNext').addEventListener('click', ()=>{
     noInvite:document.getElementById('noInvite').checked,
     groomFather:document.getElementById('groomFather').value,
     groomMother:document.getElementById('groomMother').value,
+    groomOrder:document.getElementById('groomOrder').value,
     groomName:document.getElementById('groomName').value,
     brideFather:document.getElementById('brideFather').value,
     brideMother:document.getElementById('brideMother').value,
+    brideOrder:document.getElementById('brideOrder').value,
     brideName:document.getElementById('brideName').value,
     eventDate:document.getElementById('eventDate').value,  // YYYY-MM-DD
     eventTime:document.getElementById('eventTime').value,  // HH:MM (24h)
