@@ -1,186 +1,415 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>추가 정보 입력</title>
-<style>
-body {
-  font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  margin:0; padding:16px; background:#f9f9f9; color:#111;
-}
-.card {
-  max-width:420px; margin:0 auto; background:#fff; padding:16px;
-  border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,0.1);
-}
-h2 { margin-top:0; font-size:18px }
-.row-inline {
-  display:flex; align-items:center; gap:6px; margin:8px 0;
-  flex-wrap:wrap;
-}
-.row-inline label {
-  flex:0 0 120px; font-size:14px; font-weight:600;
-}
-.row-inline input, .row-inline select {
-  flex:1; min-width:0;
-  padding:8px; font-size:14px;
-  border:1px solid #ccc; border-radius:6px;
-}
-.btn {
-  padding:10px 12px; border:0; border-radius:6px;
-  cursor:pointer; font-weight:600; font-size:14px;
-}
-.btn.primary { background:#111; color:#fff; width:100%; margin-top:12px }
-.preview {
-  white-space:pre-wrap; border:1px solid #ddd; padding:12px;
-  border-radius:12px; background:#fafafa; margin-top:12px; font-size:14px;
-}
-.hidden { display:none }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>추가 정보 입력</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:16px;background:#f9f9f9;color:#111}
+    .card{max-width:420px;margin:0 auto;background:#fff;padding:16px;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+    h1{margin:0 0 6px 0;font-size:18px}
+    h3{margin:12px 0 8px 0;font-size:16px;font-weight:800}
+    label{display:block;margin:8px 0 4px;font-weight:600;font-size:14px}
+    .help{font-size:12px;color:#8a8a8a;margin-top:6px}
+    .section{margin-top:16px;padding-top:0}
+    .hidden{display:none !important}
+    .error{color:#b91c1c;font-size:12px;margin-top:6px}
+    .muted{color:#8a8a8a}
+
+    input[type="text"],input[type="tel"],select{
+      width:100%;padding:10px 12px;font-size:14px;border:1.5px solid #ddd;border-radius:8px;background:#fff;
+      transition:.2s;outline:none;box-sizing:border-box
+    }
+    input::placeholder{color:#aaa;font-size:13px}
+    input:focus,select:focus{border-color:#111;box-shadow:0 0 0 3px rgba(17,17,17,.08)}
+    .row{display:flex;gap:6px;flex-wrap:wrap}
+    .col{flex:1 1 180px}
+
+    .btn{padding:10px 12px;border:0;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px}
+    .btn.primary{background:#111;color:#fff}
+    .btn.ghost{background:transparent;border:1.5px solid #ddd}
+    .btn.full{width:100%}
+    .btn.disabled{opacity:.5;cursor:not-allowed}
+
+    .seg{display:flex;gap:6px;flex-wrap:wrap}
+    .seg__btn{flex:1;padding:10px 12px;border:1.5px solid #ddd;border-radius:6px;background:#fff;font-weight:600;font-size:14px;cursor:pointer}
+    .seg__btn[aria-pressed="true"],.seg__btn.is-selected{background:#111;color:#fff;border-color:#111}
+
+    dialog{border:none;border-radius:12px;max-width:420px;width:calc(100% - 24px);padding:0}
+    dialog .dlg-body{padding:16px}
+    dialog .dlg-head{padding:12px 16px;font-weight:700}
+    dialog .dlg-foot{padding:12px 16px;display:flex;gap:8px;justify-content:flex-end}
+
+    .footer{display:flex;justify-content:center;gap:8px;margin-top:12px}
+  </style>
 </head>
 <body>
-<div class="card">
-  <h2>추가 정보 입력</h2>
+  <div class="card" role="region" aria-label="추가 정보 입력">
+    <h1>추가 정보 입력</h1>
+    <p class="help">아래 단계가 순차적으로 열립니다</p>
 
-  <div class="row-inline">
-    <label for="name">임원 성함 *</label>
-    <input id="name" placeholder="예: 김석호">
-  </div>
+    <!-- 측 선택 -->
+    <section class="section" id="sec-side">
+      <div class="seg" role="group" aria-label="신랑측/신부측 선택">
+        <button type="button" class="seg__btn" id="btn-groom-side" data-side="groom" aria-pressed="false">신랑측</button>
+        <button type="button" class="seg__btn" id="btn-bride-side" data-side="bride" aria-pressed="false">신부측</button>
+      </div>
+    </section>
 
-  <div class="row-inline">
-    <label>임원측 *</label>
-    <div>
-      <label><input type="radio" name="parentSide" value="groom"> 신랑측</label>
-      <label><input type="radio" name="parentSide" value="bride"> 신부측</label>
+    <!-- 성함 선택 -->
+    <section class="section hidden" id="sec-person">
+      <h3>성함 선택</h3>
+      <div class="seg" role="group" aria-label="아버지/어머니/본인 선택">
+        <button type="button" class="seg__btn" id="btn-father" data-person="father" aria-pressed="false">아버지</button>
+        <button type="button" class="seg__btn" id="btn-mother" data-person="mother" aria-pressed="false">어머니</button>
+        <button type="button" class="seg__btn" id="btn-self" data-person="self" aria-pressed="false">본인</button>
+      </div>
+    </section>
+
+    <!-- 삼성전자 재직여부 -->
+    <section class="section hidden" id="sec-status">
+      <h3>삼성전자 재직여부</h3>
+      <div class="seg" role="group" aria-label="재직/퇴임 선택">
+        <button type="button" class="seg__btn" data-status="재직" id="btn-onjob" aria-pressed="false">재직</button>
+        <button type="button" class="seg__btn" data-status="퇴임" id="btn-retire" aria-pressed="false">퇴임</button>
+      </div>
+    </section>
+
+    <!-- (재직시) 근무 부서/직책  -->
+    <section class="section hidden" id="sec-onjob">
+      <div class="row">
+        <div class="col">
+          <label id="lbl-dept">근무 부서<span class="req">*</span></label>
+          <input type="text" id="dept" placeholder="예) MX기획팀" autocomplete="organization" />
+        </div>
+        <div class="col">
+          <label id="lbl-title">직책<span class="req">*</span></label>
+          <input type="text" id="title" placeholder="예) 부장" autocomplete="organization-title" />
+        </div>
+      </div>
+    </section>
+
+    <!-- (퇴임시) 현직장 및 직책 -->
+    <section class="section hidden" id="sec-retire">
+      <h3>현직장 및 직책</h3>
+      <input type="text" id="curCombined" placeholder="예) OO재단 고문" />
+    </section>
+
+    <!-- 청탁금지법 -->
+    <section class="section hidden" id="sec-act">
+      <h3>청탁금지법(배우자 포함)</h3>
+      <div class="seg" role="group" aria-label="청탁금지법 대상 여부">
+        <button type="button" class="seg__btn" data-act="비대상" id="btn-act-no" aria-pressed="false">비대상</button>
+        <button type="button" class="seg__btn" data-act="대상" id="btn-act-yes" aria-pressed="false">대상</button>
+      </div>
+      <div id="act-extra" class="hidden" style="margin-top:8px">
+        <div class="seg" role="group" aria-label="본인/배우자 선택" style="margin-bottom:8px">
+          <button type="button" class="seg__btn" data-who="본인" id="btn-who-self" aria-pressed="false">본인</button>
+          <button type="button" class="seg__btn" data-who="배우자" id="btn-who-spouse" aria-pressed="false">배우자</button>
+        </div>
+        <div id="spouse-wrap" class="hidden">
+          <label>배우자 직장 및 직책</label>
+          <input type="text" id="spouseCombined" placeholder="예) OO회사 과장" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 축의계좌 -->
+    <section class="section hidden" id="sec-account">
+      <h3>축의계좌</h3>
+      <div class="row">
+        <div class="col" id="bankCol">
+          <select id="bankSelect">
+            <option value="">은행 선택</option>
+            <option>국민</option><option>신한</option><option>우리</option>
+            <option>하나</option><option>농협</option><option>기업</option>
+            <option value="__custom__">직접입력</option>
+          </select>
+          <input class="hidden" id="bankInput" type="text" placeholder="은행명 입력" />
+        </div>
+        <div class="col">
+          <input type="text" id="account" placeholder="계좌번호(하이픈 포함)" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 연락처 -->
+    <section class="section hidden" id="sec-phone">
+      <h3>연락처</h3>
+      <input type="tel" id="phone" placeholder="010-1234-5678 (하이픈 포함)" />
+    </section>
+
+    <!-- 계좌공개 -->
+    <section class="section hidden" id="sec-open">
+      <h3>계좌공개</h3>
+      <div class="seg" role="group" aria-label="계좌공개 선택">
+        <button type="button" class="seg__btn" id="btn-open-yes" data-open="희망" aria-pressed="false">희망</button>
+        <button type="button" class="seg__btn" id="btn-open-no" data-open="비희망" aria-pressed="false">비희망</button>
+      </div>
+      <div class="help">* 퇴임임원 안내 문자 내 계좌번호 공개</div>
+    </section>
+
+    <!-- 미리보기 -->
+    <section class="section hidden" id="sec-preview">
+      <button class="btn primary full disabled" id="btn-preview" aria-disabled="true">게시글 미리보기</button>
+      <div id="err" class="error hidden"></div>
+    </section>
+
+    <!-- Footer -->
+    <div class="footer">
+      <button class="btn primary" id="btn-submit" disabled>제출</button>
+      <a class="btn ghost" href="./wedding.html" id="btn-back">이전</a>
     </div>
   </div>
 
-  <div class="row-inline">
-    <label for="empStatus">재직/퇴임 *</label>
-    <select id="empStatus">
-      <option value="">선택</option>
-      <option>재직</option>
-      <option>퇴임</option>
-    </select>
-  </div>
+  <!-- 미리보기 모달 -->
+  <dialog id="dlg">
+    <div class="dlg-head">게시글 미리보기</div>
+    <div class="dlg-body">
+      <pre id="previewText" style="white-space:pre-wrap;font-size:14px;line-height:1.4"></pre>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn ghost" id="dlg-cancel">닫기</button>
+      <button class="btn primary" id="dlg-ok">확인하고 제출</button>
+    </div>
+  </dialog>
 
-  <div class="row-inline">
-    <label for="deptWhenEmployed">근무 부서 *</label>
-    <input id="deptWhenEmployed" placeholder="예: 무선사업부">
-  </div>
+  <script>
+    /* ===== 이전 페이지 저장값 로드 (inviteInfo) ===== */
+    const KEYMAP = {
+      groom: ['groomName','groom','groom_name'],
+      bride: ['brideName','bride','bride_name'],
+      groomFather: ['groomFather','groom_father','groomFatherName'],
+      groomMother: ['groomMother','groom_mother','groomMotherName'],
+      brideFather: ['brideFather','bride_father','brideFatherName'],
+      brideMother: ['brideMother','bride_mother','brideMotherName']
+    };
+    const pick = (obj, keys) => { for (const k of keys) if (obj && obj[k]) return String(obj[k]); return ''; };
+    function readPrev() {
+      let base = {};
+      try {
+        const s = localStorage.getItem('inviteInfo') || localStorage.getItem('weddingForm');
+        if (s) base = JSON.parse(s);
+      } catch {}
+      const flat = {};
+      Object.values(KEYMAP).flat().forEach(k=>{
+        const v = localStorage.getItem(k);
+        if (v) flat[k] = v;
+      });
+      const src = { ...base, ...flat };
+      return {
+        groom:       pick(src, KEYMAP.groom),
+        bride:       pick(src, KEYMAP.bride),
+        groomFather: pick(src, KEYMAP.groomFather),
+        groomMother: pick(src, KEYMAP.groomMother),
+        brideFather: pick(src, KEYMAP.brideFather),
+        brideMother: pick(src, KEYMAP.brideMother),
+      };
+    }
+    const WF = readPrev();
 
-  <div class="row-inline">
-    <label for="currentJobTitle">직책 *</label>
-    <input id="currentJobTitle" placeholder="예: 상무">
-    <span id="jobStatusNote" style="color:#555;font-size:12px"></span>
-  </div>
+    /* ===== 상태/유틸 ===== */
+    const state = {
+      side:'', person:'', status:'',
+      dept:'', title:'', curCombined:'',
+      act:'', who:'', spouseCombined:'',
+      bank:'', account:'', phone:'', open:''
+    };
+    const el=(id)=>document.getElementById(id);
+    const show=(x)=>x.classList.remove('hidden');
+    const hide=(x)=>x.classList.add('hidden');
+    const enable=(b)=>{b.classList.remove('disabled');b.removeAttribute('aria-disabled');};
+    const disable=(b)=>{b.classList.add('disabled');b.setAttribute('aria-disabled','true');};
+    const enableSubmit=()=>el('btn-submit').removeAttribute('disabled');
+    const disableSubmit=()=>el('btn-submit').setAttribute('disabled','');
+    const press=(btn,on)=>{btn.setAttribute('aria-pressed',String(!!on)); if(on){btn.classList.add('is-selected');}else{btn.classList.remove('is-selected');}};
 
-  <div class="row-inline">
-    <label for="antiGraft">청탁금지법 *</label>
-    <select id="antiGraft">
-      <option value="">선택</option>
-      <option>대상</option>
-      <option>비대상</option>
-    </select>
-  </div>
+    const secPerson=el('sec-person'),secStatus=el('sec-status'),secOnjob=el('sec-onjob'),
+          secRetire=el('sec-retire'),secAct=el('sec-act'),secAccount=el('sec-account'),
+          secPhone=el('sec-phone'),secOpen=el('sec-open'),secPreview=el('sec-preview'),err=el('err');
 
-  <div class="row-inline">
-    <label for="bankNumber">축의계좌 *</label>
-    <input id="bankNumber" placeholder="계좌번호">
-  </div>
+    function roleLabel(role, name) { return name ? `${role} · ${name}` : `${role} · 성함 없음`; }
 
-  <div class="row-inline">
-    <label for="bankName">은행 *</label>
-    <select id="bankName">
-      <option value="">선택</option>
-      <option>국민</option><option>신한</option><option>우리</option>
-      <option>하나</option><option>농협</option><option>기업</option>
-    </select>
-  </div>
+    /* ===== 측 선택 ===== */
+    function selectSide(side){
+      state.side=side;
+      press(el('btn-groom-side'), side==='groom');
+      press(el('btn-bride-side'), side==='bride');
+      if(side==='groom'){
+        el('btn-father').textContent=roleLabel('아버지',WF.groomFather);
+        el('btn-mother').textContent=roleLabel('어머니',WF.groomMother);
+        el('btn-self').textContent=roleLabel('본인',WF.groom);
+      }else{
+        el('btn-father').textContent=roleLabel('아버지',WF.brideFather);
+        el('btn-mother').textContent=roleLabel('어머니',WF.brideMother);
+        el('btn-self').textContent=roleLabel('본인',WF.bride);
+      }
+      show(secPerson);
+    }
+    el('btn-groom-side').addEventListener('click',()=>selectSide('groom'));
+    el('btn-bride-side').addEventListener('click',()=>selectSide('bride'));
 
-  <div class="row-inline">
-    <label for="phone">연락처 *</label>
-    <input id="phone" placeholder="010-1234-5678">
-  </div>
+    /* ===== 성함 선택 ===== */
+    function selectPerson(p){
+      state.person=p;
+      press(el('btn-father'),p==='father');
+      press(el('btn-mother'),p==='mother');
+      press(el('btn-self'),  p==='self');
+      show(secStatus);
+    }
+    el('btn-father').addEventListener('click',()=>selectPerson('father'));
+    el('btn-mother').addEventListener('click',()=>selectPerson('mother'));
+    el('btn-self').addEventListener('click',()=>selectPerson('self'));
 
-  <div class="row-inline">
-    <label for="accountDisclosure">계좌공개 *</label>
-    <select id="accountDisclosure">
-      <option value="">선택</option>
-      <option>희망</option>
-      <option>비희망</option>
-    </select>
-  </div>
+    /* ===== 재직/퇴임 ===== */
+    function selectStatus(s){
+      state.status=s;
+      press(el('btn-onjob'), s==='재직');
+      press(el('btn-retire'),s==='퇴임');
 
-  <button class="btn primary" id="btnPreview">게시글 미리보기</button>
-  <div id="previewBox" class="preview hidden"></div>
-  <button class="btn primary" id="btnSubmit">제출</button>
-  <div id="submitMsg" class="hidden"></div>
-</div>
+      if(s==='퇴임'){
+        el('lbl-dept').innerHTML='근무 부서 <span class="muted">(재직시)</span>';
+        el('lbl-title').innerHTML='직책 <span class="muted">(재직시)</span>';
+        show(secOnjob);
+        show(secRetire);
+      }else{
+        el('lbl-dept').innerHTML='근무 부서<span class="req">*</span>';
+        el('lbl-title').innerHTML='직책<span class="req">*</span>';
+        show(secOnjob);
+        hide(secRetire);
+      }
 
-<script>
-const ENDPOINT="https://wedding-proxy.ini203-kim.workers.dev";
-const invite=JSON.parse(localStorage.getItem('inviteInfo')||'{}');
+      show(secAct); show(secAccount); show(secPhone); show(secOpen); show(secPreview);
+      validate();
+    }
+    el('btn-onjob').addEventListener('click',()=>selectStatus('재직'));
+    el('btn-retire').addEventListener('click',()=>selectStatus('퇴임'));
 
-// 연락처 자동 하이픈
-document.getElementById('phone').addEventListener('input',(e)=>{
-  let num=e.target.value.replace(/\D/g,"");
-  if(num.length===10){
-    num=num.replace(/(\d{2,3})(\d{3,4})(\d{4})/,"$1-$2-$3");
-  }else if(num.length===11){
-    num=num.replace(/(\d{3})(\d{4})(\d{4})/,"$1-$2-$3");
-  }
-  e.target.value=num;
-});
+    /* ===== 은행 선택/직접입력 ===== */
+    const bankSelect=el('bankSelect'), bankInput=el('bankInput');
+    function syncBankState(){
+      if(bankSelect && bankSelect.value==='__custom__'){
+        bankSelect.classList.add('hidden');
+        bankInput.classList.remove('hidden');
+        bankInput.focus();
+        state.bank = bankInput.value.trim();
+      }else if(bankSelect){
+        bankInput.classList.add('hidden');
+        bankSelect.classList.remove('hidden');
+        state.bank = bankSelect.value.trim();
+      }
+      validate();
+    }
+    bankSelect.addEventListener('change', syncBankState);
+    bankInput.addEventListener('input', ()=>{ state.bank=bankInput.value.trim(); validate(); });
 
-// 🟢 퇴임 선택 시만 "(재직중)" 표시
-document.getElementById('empStatus').addEventListener('change',(e)=>{
-  if(e.target.value==="퇴임"){
-    document.getElementById('jobStatusNote').innerText="(재직중)";
-  }else{
-    document.getElementById('jobStatusNote').innerText="";
-  }
-});
+    /* ===== 입력 바인딩 ===== */
+    ['dept','title','curCombined','spouseCombined'].forEach(id=>el(id)?.addEventListener('input',e=>{
+      state[id]=e.target.value.trim();
+      validate();
+    }));
+    el('account').addEventListener('input',e=>{ state.account=e.target.value; validate(); });
+    el('phone').addEventListener('input',e=>{ state.phone=e.target.value; validate(); });
 
-// 🟢 미리보기 (단순 예시, 상세는 기존 로직과 결합 필요)
-document.getElementById('btnPreview').addEventListener('click',()=>{
-  const side=document.querySelector('input[name="parentSide"]:checked')?.value;
-  const empStatus=document.getElementById('empStatus').value;
-  const dept=document.getElementById('deptWhenEmployed').value;
-  const name=document.getElementById('name').value;
-  const job=document.getElementById('currentJobTitle').value;
-  const phone=document.getElementById('phone').value;
-  const bank=document.getElementById('bankName').value;
-  const bankNum=document.getElementById('bankNumber').value;
-  const anti=document.getElementById('antiGraft').value;
+    /* ===== 청탁금지법 ===== */
+    function selectAct(v){
+      state.act=v;
+      press(el('btn-act-no'), v==='비대상');
+      press(el('btn-act-yes'), v==='대상');
+      if(v==='대상'){
+        show(el('act-extra'));
+      } else {
+        hide(el('act-extra'));
+        state.who='';
+        press(el('btn-who-self'), false);
+        press(el('btn-who-spouse'), false);
+        hide(el('spouse-wrap'));
+        state.spouseCombined='';
+      }
+      validate();
+    }
+    el('btn-act-no').addEventListener('click',()=>selectAct('비대상'));
+    el('btn-act-yes').addEventListener('click',()=>selectAct('대상'));
 
-  let header="";
-  if(empStatus==="재직"){
-    header=`삼성전자 ${dept} ${name} ${job} ${side==="groom"?invite.groomOrder:invite.brideOrder}결혼을 안내하오니\n많은 축하 부탁드립니다.\n\n`;
-  }else if(empStatus==="퇴임"){
-    header=`전)삼성전자 ${dept} ${name} ${job} ${side==="groom"?invite.groomOrder:invite.brideOrder}결혼을 안내하오니\n많은 축하 부탁드립니다.\n\n`;
-  }
+    function selectWho(v){
+      state.who=v;
+      press(el('btn-who-self'), v==='본인');
+      press(el('btn-who-spouse'), v==='배우자');
+      if(v==='배우자'){ show(el('spouse-wrap')); } else { hide(el('spouse-wrap')); state.spouseCombined=''; }
+      validate();
+    }
+    el('btn-who-self').addEventListener('click',()=>selectWho('본인'));
+    el('btn-who-spouse').addEventListener('click',()=>selectWho('배우자'));
 
-  let familyBlock="";
-  if(side==="groom"){
-    familyBlock=`${invite.groomFather} · ${invite.groomMother} 의 ${invite.groomOrder} ${invite.groomName}\n`+
-                `${invite.brideFather} · ${invite.brideMother} 의 ${invite.brideOrder} ${invite.brideName}\n\n`;
-  }else if(side==="bride"){
-    familyBlock=`${invite.brideFather} · ${invite.brideMother} 의 ${invite.brideOrder} ${invite.brideName}\n`+
-                `${invite.groomFather} · ${invite.groomMother} 의 ${invite.groomOrder} ${invite.groomName}\n\n`;
-  }
+    /* ===== 계좌공개 ===== */
+    function selectOpen(v){ state.open=v; press(el('btn-open-yes'),v==='희망'); press(el('btn-open-no'),v==='비희망'); validate(); }
+    el('btn-open-yes').addEventListener('click',()=>selectOpen('희망'));
+    el('btn-open-no').addEventListener('click',()=>selectOpen('비희망'));
 
-  let schedule=`□ 일 시 : ${invite.eventDate} ${invite.eventTime}\n`+
-               `□ 장 소 : ${invite.venueDetail}\n   (${invite.venueAddr})\n`+
-               `□ 연락처 : ${phone} (${name} ${job})\n`+
-               `□ 축의금 전달계좌 : ${bank}은행 ${bankNum} (${name})\n`;
+    /* ===== 검증 ===== */
+    function validate(){
+      err.classList.add('hidden'); err.textContent='';
 
-  if(anti==="대상") schedule+=`\n※ 청탁금지법 대상`;
-  if(anti==="비대상") schedule+=`\n※ 청탁금지법 비대상`;
+      if(!state.side||!state.person||!state.status){ disable(el('btn-preview')); disableSubmit(); return; }
 
-  document.getElementById('previewBox').innerText=header+familyBlock+schedule;
-  document.getElementById('previewBox').classList.remove('hidden');
-});
-</script>
+      if(state.status==='재직'){
+        if(!state.dept||!state.title){ disable(el('btn-preview')); disableSubmit(); return; }
+      }else{ // 퇴임
+        if(!state.dept||!state.title||!state.curCombined){ disable(el('btn-preview')); disableSubmit(); return; }
+      }
+
+      if(state.act==='대상' && !state.who){ disable(el('btn-preview')); disableSubmit(); return; }
+      if(state.who==='배우자' && !state.spouseCombined.trim()){ disable(el('btn-preview')); disableSubmit(); return; }
+
+      if(!state.bank){ disable(el('btn-preview')); disableSubmit(); return; }
+      if(!/^[0-9-]{6,}$/.test(state.account)){ disable(el('btn-preview')); disableSubmit(); return; }
+      if(!/^[0-9-]{10,13}$/.test(state.phone)){ disable(el('btn-preview')); disableSubmit(); return; }
+
+      if(!state.open){ disable(el('btn-preview')); disableSubmit(); return; }
+
+      enable(el('btn-preview')); enableSubmit();
+    }
+
+    /* ===== 미리보기/제출 ===== */
+    function buildPreview(){
+      const sideKo=state.side==='groom'?'신랑측':'신부측';
+      const nameSet=state.side==='groom'
+        ? {father:WF.groomFather,mother:WF.groomMother,self:WF.groom}
+        : {father:WF.brideFather,mother:WF.brideMother,self:WF.bride};
+      const whoName=state.person==='father'?'아버지':(state.person==='mother'?'어머니':'본인');
+      const subjectName=nameSet[state.person]||'(성함 미입력)';
+      const lines=[];
+      lines.push(`[${sideKo}] ${whoName}: ${subjectName}`);
+      lines.push(`삼성전자 재직여부: ${state.status}`);
+      lines.push(`부서/직책(재직시): ${state.dept||'-'} / ${state.title||'-'}`);
+      if(state.status==='퇴임'){lines.push(`현직장/직책: ${state.curCombined||'-'}`);}
+      lines.push(`청탁금지법: ${state.act||'미선택'}`);
+      if(state.act==='대상'){lines.push(`대상 구분: ${state.who}`);}
+      if(state.who==='배우자'){lines.push(`배우자 직장/직책: ${state.spouseCombined||'-'}`);}
+      lines.push(`축의계좌: ${state.bank} ${state.account}`);
+      lines.push(`연락처(본인): ${state.phone}`);
+      lines.push(`계좌공개: ${state.open}`);
+      return lines.join('\n');
+    }
+
+    el('btn-preview').addEventListener('click',()=>{
+      if(el('btn-preview').hasAttribute('aria-disabled')) return;
+      el('previewText').textContent=buildPreview();
+      el('dlg').showModal();
+    });
+    el('dlg-cancel').addEventListener('click',()=>el('dlg').close());
+    el('dlg-ok').addEventListener('click',()=>{ el('dlg').close(); submit(); });
+
+    function submit(){
+      localStorage.setItem('weddingDetail', JSON.stringify(state));
+      alert('제출되었습니다. (임시 저장: localStorage.weddingDetail)');
+    }
+    document.getElementById('btn-submit').addEventListener('click',()=>{
+      if(!el('btn-submit').hasAttribute('disabled')) submit();
+    });
+
+    // 초기 검증
+    validate();
+  </script>
 </body>
 </html>
