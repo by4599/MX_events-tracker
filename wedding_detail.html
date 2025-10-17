@@ -230,11 +230,9 @@
 
     function roleLabel(role, name) { return name ? `${role} · ${name}` : `${role} · 성함 없음`; }
 
-    /* ====== 🔹 AI 제안 로드 & 자동 프리필 유틸 ====== */
+    /* ====== 🔹 AI 제안 로드 & 자동 프리필 유틸 (UI 변경 없음) ====== */
     let AI = {};
-    try {
-      AI = JSON.parse(localStorage.getItem('ai_suggestions') || '{}');
-    } catch { AI = {}; }
+    try { AI = JSON.parse(localStorage.getItem('ai_suggestions') || '{}'); } catch { AI = {}; }
 
     // 측/인물 조합 → (bank, account, phone) 제안값 선택
     function pickSuggestion(side, person) {
@@ -251,11 +249,7 @@
         }
       };
       const o = (map[side] && map[side][person]) || {};
-      return {
-        bank: (o.bank || '').trim(),
-        account: (o.account || '').trim(),
-        phone: (o.phone || '').trim()
-      };
+      return { bank:(o.bank||'').trim(), account:(o.account||'').trim(), phone:(o.phone||'').trim() };
     }
 
     // 입력칸에 제안값 반영 (빈 칸일 때만)
@@ -313,9 +307,8 @@
       }
       show(secPerson);
 
-      // 🔽 side만 선택해도 '본인' 기준으로 우선 프리필
-      const sug = pickSuggestion(state.side, 'self');
-      applySuggestionToInputs(sug);
+      // 🔹 추가: 측만 선택해도 '본인' 기준으로 우선 프리필
+      applySuggestionToInputs(pickSuggestion(state.side, 'self'));
     }
     el('btn-groom-side').addEventListener('click',()=>selectSide('groom'));
     el('btn-bride-side').addEventListener('click',()=>selectSide('bride'));
@@ -328,9 +321,8 @@
       press(el('btn-self'),  p==='self');
       show(secStatus);
 
-      // 🔽 측+인물 조합에 맞춰 자동 프리필
-      const sug = pickSuggestion(state.side, state.person);
-      applySuggestionToInputs(sug);
+      // 🔹 추가: 측+인물 조합에 맞춰 자동 프리필
+      applySuggestionToInputs(pickSuggestion(state.side, state.person));
     }
     el('btn-father').addEventListener('click',()=>selectPerson('father'));
     el('btn-mother').addEventListener('click',()=>selectPerson('mother'));
