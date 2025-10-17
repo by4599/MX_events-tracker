@@ -30,9 +30,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 .btn{ padding:10px 12px; border:0; border-radius:6px; cursor:pointer; font-weight:600; font-size:14px; }
 .btn.primary{ background:#111; color:#fff; width:100%; margin-top:12px; }
 .section{ margin-top:16px; padding-top:12px; border-top:1px solid #eee; }
-.msg{ margin-top:8px; font-size:13px; font-weight:600; white-space:pre-line; }
-.msg[style*="red"]{ color:#C82D2D !important; }
-.msg[style*="green"]{ color:#00954B !important; }
+.msg{ margin-top:8px; font-size:13px; }
 
 /* ================== 토글 스위치 ================== */
 .toggle-wrapper{ display:flex; align-items:center; justify-content:space-between; margin:12px 0; font-size:14px; }
@@ -114,6 +112,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 }
 .cal-head .sun{ color:#C82D2D; }
 .cal-head .sat{ color:#142396; }
+
 .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
 
 /* 날짜 셀 */
@@ -269,7 +268,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   <button class="btn primary" id="btnNext">추가 정보 입력</button>
 </div>
 
-<!-- ================== 오버레이(달력/시간 모달) ================== -->
+<!-- ================== 오버레이 및 모달 ================== -->
 <div id="pickerBackdrop" class="picker-backdrop"></div>
 
 <!-- 날짜 피커 -->
@@ -302,7 +301,9 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 
 <!-- 시간 피커 -->
 <div id="timePicker" class="picker" role="dialog" aria-modal="true" aria-label="시간 선택">
-  <div class="picker__hdr"><div class="picker__title">시간 선택</div></div>
+  <div class="picker__hdr">
+    <div class="picker__title">시간 선택</div>
+  </div>
   <div class="picker__body">
     <span id="ampmGroupLabel" class="sr-only">오전/오후 선택</span>
     <span id="hourGroupLabel" class="sr-only">시간(시) 선택</span>
@@ -322,8 +323,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 
 <script>
 /* ================== 설정/상수 ================== */
-// 👉 Apps Script 웹앱 URL로 교체하세요
-const ENDPOINT = "https://script.google.com/macros/s/AKfycb_YOUR_SCRIPT_ID/exec";
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbwsBf2tcQ_17Fpu_yDcEcn4uQDnZ0T8bU5L9KJtkgCCvXOsn5IfKEwVTP5_o7-fQmbvww/exec";
 
 /* 필수 입력 항목 목록 */
 const requiredFields = [
@@ -343,35 +343,40 @@ const requiredFields = [
 
 /* ================== AI 분석 버튼 ================== */
 document.getElementById('btnCheck').addEventListener('click', async ()=>{
-  const msg=document.getElementById('msg');
-  const url=document.getElementById('inviteUrl').value.trim();
+  const msg = document.getElementById('msg');
+  const url = document.getElementById('inviteUrl').value.trim();
   if(!url){ msg.textContent="❌ 청첩장 URL을 입력하세요."; msg.style.color="red"; return; }
+
   msg.textContent="⏳ AI로 분석 중입니다..."; msg.style.color="#333";
 
+  // AbortController로 타임아웃 (25초)
+  const controller = new AbortController();
+  const timer = setTimeout(()=>controller.abort(), 25000);
+
   try{
-    const controller = new AbortController();
-    const timeout = setTimeout(()=>controller.abort(), 25000);
-    const reqUrl = `${ENDPOINT}?action=extract&url=${encodeURIComponent(url)}`;
-    console.log("REQ:", reqUrl);
+    const reqUrl = ENDPOINT + "?action=extract&url=" + encodeURIComponent(url);
+    const res = await fetch(reqUrl, { method:"GET", signal: controller.signal });
 
-    const res=await fetch(reqUrl, { signal:controller.signal });
-    clearTimeout(timeout);
+    if(!res.ok){
+      // 403/404 등 상태코드 표시
+      const txt = await res.text().catch(()=> "");
+      throw new Error(`요청 실패 (HTTP ${res.status}) ${txt ? "- " + txt.slice(0,120) : ""}`);
+    }
 
-    if(!res.ok) throw new Error(`요청 실패 (HTTP ${res.status})`);
-
-    const data=await res.json().catch(()=>{ throw new Error("JSON 파싱 오류"); });
-
+    const data = await res.json().catch(()=> ({}));
     const payload = (data && typeof data==='object' && 'data' in data) ? (data.data || {}) : (data || {});
-    if(data.ok){
-      groomFather.value=payload.groomFather||"";
-      groomMother.value=payload.groomMother||"";
-      groomOrder.value=payload.groomOrder||"";
-      groomName.value=payload.groomName||"";
-      brideFather.value=payload.brideFather||"";
-      brideMother.value=payload.brideMother||"";
-      brideOrder.value=payload.brideOrder||"";
-      brideName.value=payload.brideName||"";
 
+    if(data.ok){
+      groomFather.value = payload.groomFather || "";
+      groomMother.value = payload.groomMother || "";
+      groomOrder.value  = payload.groomOrder  || "";
+      groomName.value   = payload.groomName   || "";
+      brideFather.value = payload.brideFather || "";
+      brideMother.value = payload.brideMother || "";
+      brideOrder.value  = payload.brideOrder  || "";
+      brideName.value   = payload.brideName   || "";
+
+      // 날짜/시간 정규화
       const dateRaw = payload.eventDate || payload.date || "";
       const timeRaw = payload.eventTime || payload.time || "";
       const dtFromTime = extractDateAndTimeKR(timeRaw);
@@ -381,15 +386,28 @@ document.getElementById('btnCheck').addEventListener('click', async ()=>{
       setDateDisplay(finalDate);
       setTimeDisplay(finalTime);
 
-      venueAddr.value=payload.venueAddr||"";
-      venueDetail.value=payload.venue||"";
+      // 장소
+      venueAddr.value   = payload.venueAddr || "";
+      venueDetail.value = payload.venue     || "";
+
+      // detail 페이지에서 활용할 수 있도록 원문 payload도 저장 (전화/계좌 포함)
+      localStorage.setItem('inviteExtractRaw', JSON.stringify(payload));
+
       msg.textContent="✅ AI로 예식 정보가 입력되었습니다. 확인 바랍니다."; msg.style.color="green";
     }else{
-      msg.textContent="❌ 분석 실패: "+(data.error||"Unknown"); msg.style.color="red";
+      throw new Error("분석 실패: " + (data && data.error ? data.error : "Unknown"));
     }
   }catch(err){
-    msg.textContent=`❌ 네트워크 오류 또는 API 응답 실패: ${err.message}`; msg.style.color="red";
-    console.error(err);
+    if (err.name === 'AbortError') {
+      msg.textContent = "❌ 네트워크 지연 혹은 타임아웃(25초). 다시 시도해주세요.";
+    } else if (/access-control-allow-origin|cors/i.test(String(err))) {
+      msg.textContent = "❌ CORS 문제로 호출 실패. (GAS 웹앱 배포 권한/코드 CORS 헤더 확인)";
+    } else {
+      msg.textContent = "❌ 분석 실패: " + err.message;
+    }
+    msg.style.color="red";
+  }finally{
+    clearTimeout(timer);
   }
 });
 
@@ -597,7 +615,7 @@ document.getElementById('timeConfirm').addEventListener('click', ()=>{
   closePicker();
 });
 
-/* ================== 시간 정규화/자연어 파서 ================== */
+/* ================== 시간/날짜 파서 ================== */
 function normalizeToHHMM(raw){
   if(!raw) return '';
   let s = String(raw).trim()
@@ -632,7 +650,6 @@ function normalizeToHHMM(raw){
   }
   return '';
 }
-
 function extractDateAndTimeKR(raw){
   const out = { date:'', time:'' };
   if(!raw) return out;
@@ -662,8 +679,6 @@ function extractDateAndTimeKR(raw){
   }
   return out;
 }
-
-/** 외부에서 시간 값 세팅(24시간 "HH:MM") */
 function setTimeDisplay(v){
   const norm = normalizeToHHMM(v);
   if(norm){
@@ -773,6 +788,9 @@ document.getElementById('btnNext').addEventListener('click', ()=>{
     isSmallWedding:document.getElementById('isSmallWeddingInput').value,
     flower:document.getElementById('flowerInput').value
   };
+  // 원문 추출(전화/계좌 포함) 같이 넘겨 detail에서 활용
+  const raw = localStorage.getItem('inviteExtractRaw') || '';
+  if(raw) info._extract = JSON.parse(raw);
   localStorage.setItem('inviteInfo', JSON.stringify(info));
   location.href='wedding_detail.html';
 });
