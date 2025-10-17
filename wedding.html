@@ -91,7 +91,7 @@
       btnNext.style.display = "none";
 
       try {
-        // Apps Script API 주소 (본인 배포 URL로 교체)
+        // ⚠️ 배포한 Apps Script 웹앱 URL로 교체하세요.
         const endpoint = "https://script.google.com/macros/s/AKfycbxxxxxxxxxxxxxxxxxxxxxx/exec";
         const apiUrl = `${endpoint}?action=extract&url=${encodeURIComponent(url)}`;
         const res = await fetch(apiUrl);
@@ -111,11 +111,8 @@
             .map(([k,v]) => `${k}: ${v}`)
             .join("\n");
 
-        // ==========================
-        // ✅ AI 추출 결과 저장
-        // ==========================
+        // ✅ 추가: Wedding_detail.html에서 자동 프리필용으로 결과 저장
         const aiSuggestions = {
-          // 전화번호
           groomFatherPhone: payload.groomFatherPhone || "",
           groomMotherPhone: payload.groomMotherPhone || "",
           brideFatherPhone: payload.brideFatherPhone || "",
@@ -124,7 +121,6 @@
           bridePhone:       payload.bridePhone       || "",
           venueTel:         payload.venueTel         || "",
 
-          // 계좌정보
           groomFatherBank:    payload.groomFatherBank    || "",
           groomFatherAccount: payload.groomFatherAccount || "",
           groomMotherBank:    payload.groomMotherBank    || "",
