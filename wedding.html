@@ -356,251 +356,92 @@ async function fetchJsonWithJsonpFallback(url) {
   }
 }
 
-/* ================== 엘리먼트 헬퍼 ================== */
+/* ================== 헬퍼 함수 ================== */
 const $ = (id)=>document.getElementById(id);
-const pretty = (iso)=> (iso ? iso.split('-').join('.') : '');
 const pad = (n)=>String(n).padStart(2,'0');
+const pretty = (iso)=> (iso ? iso.split('-').join('.') : '');
 
-/* ================== 수기 입력 모드 전환 ================== */
-const noInviteEl = $('noInvite');
-const inviteUrlBlock = $('inviteUrlBlock');
-const btnCheck = $('btnCheck');
-function updateInviteMode(){
-  const off = noInviteEl.checked;
-  inviteUrlBlock.classList.toggle('hidden', off);
-  btnCheck.classList.toggle('hidden', off);
-  if(off){ $('inviteUrl').value=''; }
+/* 형제관계 커스텀 셀렉트 값 갱신용 헬퍼 */
+function setSelectAndRefresh(selectId, rawValue){
+  const sel = document.getElementById(selectId);
+  if(!sel) return;
+  const norm = (rawValue || '').trim()
+    .replace(/\s+/g,'')
+    .replace(/첫째아들|장자|첫째(?=남)/g,'장남')
+    .replace(/첫째딸|장녀|첫째(?=녀)/g,'장녀');
+  const hit = [...sel.options].find(o =>
+    o.value.replace(/\s+/g,'') === norm ||
+    o.textContent.replace(/\s+/g,'') === norm
+  );
+  sel.value = hit ? hit.value : '';
+  sel.dispatchEvent(new Event('change'));
+  const wrap = document.querySelector(`.cselect[data-for="${selectId}"]`);
+  const btn  = wrap?.querySelector('.cselect__btn');
+  const txt  = sel.selectedOptions[0]?.textContent || '선택';
+  if(btn){
+    if(!btn.firstChild) btn.appendChild(document.createTextNode(txt));
+    else btn.firstChild.nodeValue = txt;
+  }
 }
-noInviteEl.addEventListener('change', updateInviteMode);
-updateInviteMode();
 
-/* ================== 커스텀 셀렉트(형제관계) 복원 ================== */
+/* ================== 커스텀 셀렉트(형제관계) ================== */
 function enhanceSelect(selectEl){
   const wrap = document.querySelector(`.cselect[data-for="${selectEl.id}"]`);
   if(!wrap) return;
   const btn  = wrap.querySelector('.cselect__btn');
   const list = wrap.querySelector('.cselect__list');
-
   function render(){
-    list.innerHTML = '';
+    list.innerHTML='';
     [...selectEl.options].forEach(opt=>{
-      const div = document.createElement('div');
+      const div=document.createElement('div');
       div.className='cselect__option';
-      div.setAttribute('role','option');
-      div.dataset.value = opt.value;
-      div.textContent = opt.textContent;
-      div.setAttribute('aria-selected', String(opt.selected));
-      div.addEventListener('click', ()=>{
-        selectEl.value = opt.value;
-        btn.firstChild.nodeValue = opt.textContent || '선택';
+      div.dataset.value=opt.value;
+      div.textContent=opt.textContent;
+      div.setAttribute('aria-selected',String(opt.selected));
+      div.addEventListener('click',()=>{
+        selectEl.value=opt.value;
+        btn.firstChild.nodeValue=opt.textContent;
         [...list.children].forEach(n=>n.setAttribute('aria-selected','false'));
         div.setAttribute('aria-selected','true');
-        list.classList.remove('is-open'); btn.setAttribute('aria-expanded','false');
+        list.classList.remove('is-open');
+        btn.setAttribute('aria-expanded','false');
         selectEl.dispatchEvent(new Event('change'));
       });
       list.appendChild(div);
     });
-    const selOpt = selectEl.selectedOptions[0];
-    if (!btn.firstChild) btn.appendChild(document.createTextNode('선택'));
-    btn.firstChild.nodeValue = selOpt ? selOpt.textContent : '선택';
+    const selOpt=selectEl.selectedOptions[0];
+    if(!btn.firstChild) btn.appendChild(document.createTextNode('선택'));
+    btn.firstChild.nodeValue=selOpt?selOpt.textContent:'선택';
   }
-
   render();
-  btn.addEventListener('click', ()=>{
-    const open = list.classList.toggle('is-open');
-    btn.setAttribute('aria-expanded', String(open));
+  btn.addEventListener('click',()=>{
+    const open=list.classList.toggle('is-open');
+    btn.setAttribute('aria-expanded',String(open));
   });
-  document.addEventListener('click', (e)=>{
+  document.addEventListener('click',(e)=>{
     if(!wrap.contains(e.target)){
-      list.classList.remove('is-open'); btn.setAttribute('aria-expanded','false');
+      list.classList.remove('is-open');
+      btn.setAttribute('aria-expanded','false');
     }
   });
-  selectEl.addEventListener('change', render);
+  selectEl.addEventListener('change',render);
 }
 document.querySelectorAll('select[data-ui="custom-select"]').forEach(enhanceSelect);
 
-/* ================== 세그먼트 버튼(스몰웨딩/화환) 복원 ================== */
-document.addEventListener('click', (e)=>{
-  const btn = e.target.closest('.seg__btn'); if(!btn) return;
-  const seg = btn.closest('.seg'); const hiddenId = seg?.getAttribute('data-for');
-  const hidden = hiddenId ? $(hiddenId) : null;
-  if(!seg || !hidden) return;
-
+/* ================== 스몰웨딩·화환 토글 ================== */
+document.addEventListener('click',(e)=>{
+  const btn=e.target.closest('.seg__btn'); if(!btn) return;
+  const seg=btn.closest('.seg'); const hiddenId=seg?.getAttribute('data-for');
+  const hidden=hiddenId?$(hiddenId):null;
+  if(!seg||!hidden) return;
   seg.querySelectorAll('.seg__btn').forEach(b=>{
     b.setAttribute('aria-pressed','false'); b.classList.remove('is-selected');
   });
   btn.setAttribute('aria-pressed','true'); btn.classList.add('is-selected');
-  hidden.value = btn.dataset.value || '';
+  hidden.value=btn.dataset.value||'';
 });
 
-/* ================== 달력/시간 모달 복원 ================== */
-const backdrop   = $('pickerBackdrop');
-const datePicker = $('datePicker');
-const timePicker = $('timePicker');
-
-function openPicker(el){ backdrop.style.display='block'; el.style.display='block'; }
-function closePicker(){ backdrop.style.display='none'; datePicker.style.display='none'; timePicker.style.display='none'; }
-backdrop.addEventListener('click', closePicker);
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closePicker(); });
-
-/* ---- 달력 ---- */
-const calGrid = $('calGrid');
-const calYear = $('calYear');
-const calMonth = $('calMonth');
-const tempDate = $('tempDate');
-const dateYM = $('dateYM');
-const dateSelectedText = $('dateSelectedText');
-const dateHidden = $('eventDate');
-const dateDisplay = $('eventDateDisplay');
-
-function weekdayK(y,m,d){ return ['일','월','화','수','목','금','토'][new Date(y, m-1, d).getDay()]; }
-
-function renderCal(y, m, selectedIso){
-  calYear.value=y; calMonth.value=m;
-  dateYM.textContent = `${y}.${pad(m)}`;
-  calGrid.innerHTML='';
-
-  const first = new Date(y, m-1, 1);
-  const startDow = first.getDay();
-  const daysInMonth = new Date(y, m, 0).getDate();
-  const today = new Date();
-  const todayIso = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
-
-  for(let i=0;i<startDow;i++){
-    const d = new Date(y, m-1, 1 - (startDow - i));
-    const div = document.createElement('div');
-    div.className='cal-day out';
-    div.textContent = String(d.getDate());
-    const dow = d.getDay(); if(dow===0) div.classList.add('sun'); if(dow===6) div.classList.add('sat');
-    calGrid.appendChild(div);
-  }
-
-  for(let d=1; d<=daysInMonth; d++){
-    const iso = `${y}-${pad(m)}-${pad(d)}`;
-    const dow = new Date(y, m-1, d).getDay();
-    const btn = document.createElement('button');
-    btn.type='button'; btn.className='cal-day'; btn.textContent=String(d);
-    if(dow===0) btn.classList.add('sun'); if(dow===6) btn.classList.add('sat');
-    if(iso===todayIso) btn.classList.add('today');
-    if(selectedIso && iso===selectedIso) btn.classList.add('sel');
-
-    btn.addEventListener('click', ()=>{
-      tempDate.value = iso;
-      [...calGrid.querySelectorAll('.cal-day')].forEach(b=>b.classList.remove('sel'));
-      btn.classList.add('sel');
-      dateSelectedText.textContent = `선택된 날짜: ${pretty(iso)}(${weekdayK(y,m,d)})`;
-    });
-
-    calGrid.appendChild(btn);
-  }
-}
-$('prevMonth').addEventListener('click', ()=>{
-  let y=Number(calYear.value), m=Number(calMonth.value)-1; if(m<1){m=12;y--;}
-  renderCal(y,m,tempDate.value||dateHidden.value||'');
-});
-$('nextMonth').addEventListener('click', ()=>{
-  let y=Number(calYear.value), m=Number(calMonth.value)+1; if(m>12){m=1;y++;}
-  renderCal(y,m,tempDate.value||dateHidden.value||'');
-});
-$('dateCancel').addEventListener('click', closePicker);
-$('dateConfirm').addEventListener('click', ()=>{
-  const iso = tempDate.value;
-  if(iso){
-    const [yy,mm,dd] = iso.split('-').map(n=>+n);
-    dateHidden.value = iso;
-    dateDisplay.value = pretty(iso);
-    dateDisplay.removeAttribute('aria-invalid');
-    dateSelectedText.textContent = `선택된 날짜: ${pretty(iso)}(${weekdayK(yy,mm,dd)})`;
-  }else{
-    dateDisplay.setAttribute('aria-invalid','true');
-  }
-  closePicker();
-});
-dateDisplay.addEventListener('click', ()=>{
-  openPicker(datePicker);
-  const base = dateHidden.value ? new Date(dateHidden.value) : new Date();
-  tempDate.value = dateHidden.value || '';
-  if(tempDate.value){
-    const [yy,mm,dd] = tempDate.value.split('-').map(n=>+n);
-    dateSelectedText.textContent = `선택된 날짜: ${pretty(tempDate.value)}(${weekdayK(yy,mm,dd)})`;
-  }else{
-    dateSelectedText.textContent = '';
-  }
-  renderCal(base.getFullYear(), base.getMonth()+1, tempDate.value);
-});
-
-/* ---- 시간 ---- */
-const timeHidden = $('eventTime');
-const timeDisplay = $('eventTimeDisplay');
-const ampmCol = $('ampmCol'), hourCol = $('hourCol'), minCol = $('minCol');
-const tempHour = $('tempHour'), tempMin = $('tempMin');
-let tempAmpm = '오전';
-
-function to12h(h24){
-  const n = parseInt(h24,10);
-  if(isNaN(n)) return {ampm:'오전', h:'12'};
-  if(n===0) return {ampm:'오전', h:'12'};
-  if(n===12) return {ampm:'오후', h:'12'};
-  if(n>12) return {ampm:'오후', h:String(n-12).padStart(2,'0')};
-  return {ampm:'오전', h:String(n).padStart(2,'0')};
-}
-function to24h(ampm, h12){
-  let n = parseInt(h12,10) || 0;
-  if(ampm==='오전'){ if(n===12) n=0; } else { if(n<12) n+=12; }
-  return String(n).padStart(2,'0');
-}
-function renderTimeCols(selAmpm='오전', selH='12', selM='00'){
-  ampmCol.innerHTML=''; hourCol.innerHTML=''; minCol.innerHTML='';
-  ['오전','오후'].forEach(v=>{
-    const b=document.createElement('button'); b.type='button'; b.className='time-item'; b.textContent=v; b.dataset.v=v;
-    if(v===selAmpm) b.classList.add('sel');
-    b.addEventListener('click', ()=>{ tempAmpm=v; ampmCol.querySelectorAll('.time-item').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); });
-    ampmCol.appendChild(b);
-  });
-  for(let h=1; h<=12; h++){
-    const v=String(h).padStart(2,'0');
-    const b=document.createElement('button'); b.type='button'; b.className='time-item'; b.textContent=v; b.dataset.v=v;
-    if(v===selH) b.classList.add('sel');
-    b.addEventListener('click', ()=>{ tempHour.value=v; hourCol.querySelectorAll('.time-item').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); b.scrollIntoView({block:'center',behavior:'smooth'}); });
-    hourCol.appendChild(b);
-    if(v===selH) queueMicrotask(()=>b.scrollIntoView({block:'center'}));
-  }
-  ['00','10','20','30','40','50'].forEach(v=>{
-    const b=document.createElement('button'); b.type='button'; b.className='time-item'; b.textContent=v; b.dataset.v=v;
-    if(v===selM) b.classList.add('sel');
-    b.addEventListener('click', ()=>{ tempMin.value=v; minCol.querySelectorAll('.time-item').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); b.scrollIntoView({block:'center',behavior:'smooth'}); });
-    minCol.appendChild(b);
-    if(v===selM) queueMicrotask(()=>b.scrollIntoView({block:'center'}));
-  });
-}
-timeDisplay.addEventListener('click', ()=>{
-  openPicker(timePicker);
-  const v = timeHidden.value;
-  let h='12', m='00'; tempAmpm='오전';
-  if(/^\d{2}:\d{2}$/.test(v)){
-    const [hh,mm] = v.split(':'); const t=to12h(hh);
-    tempAmpm=t.ampm; h=t.h; m=mm;
-  }
-  tempHour.value=h; tempMin.value=m;
-  renderTimeCols(tempAmpm, h, m);
-});
-$('timeCancel').addEventListener('click', closePicker);
-$('timeConfirm').addEventListener('click', ()=>{
-  const h12=tempHour.value, m=tempMin.value;
-  if(h12 && m){
-    const hh = to24h(tempAmpm, h12);
-    const val = `${hh}:${m}`;
-    timeHidden.value = val;
-    const t=to12h(hh);
-    timeDisplay.value = `${t.ampm} ${t.h}:${m}`;
-    timeDisplay.removeAttribute('aria-invalid');
-  }else{
-    timeDisplay.setAttribute('aria-invalid','true');
-  }
-  closePicker();
-});
-
-/* ================== 시간/날짜 파서 ================== */
+/* ================== 날짜/시간 파서 ================== */
 function normalizeToHHMM(raw){
   if(!raw) return '';
   let s = String(raw).trim()
@@ -631,119 +472,119 @@ function normalizeToHHMM(raw){
   return '';
 }
 function extractDateAndTimeKR(raw){
-  const out = { date:'', time:'' };
+  const out={date:'',time:''};
   if(!raw) return out;
-  const s = String(raw).trim();
-  const re = /(?:(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일)?(?:\s*[일월화수목금토]요일)?(?:\s*(오전|오후|AM|PM|am|pm)?\s*(\d{1,2})(?:\s*시)?(?:\s*(\d{1,2})\s*분?)?)?/;
-  const m = s.match(re);
+  const s=String(raw).trim();
+  const re=/(?:(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일)?(?:\s*[일월화수목금토]요일)?(?:\s*(오전|오후|AM|PM|am|pm)?\s*(\d{1,2})(?:\s*시)?(?:\s*(\d{1,2})\s*분?)?)?/;
+  const m=s.match(re);
   if(m){
-    const [, yy, mm, dd, ap, hStr, minStr] = m;
-    if(yy && mm && dd){
-      out.date = `${yy}-${pad(mm)}-${pad(dd)}`;
-    }
+    const[,yy,mm,dd,ap,hStr,minStr]=m;
+    if(yy&&mm&&dd) out.date=`${yy}-${pad(mm)}-${pad(dd)}`;
     if(hStr){
-      const mm2 = minStr?pad(minStr):'00';
+      const mm2=minStr?pad(minStr):'00';
       if(ap){
-        let h = parseInt(hStr,10)||0;
-        const apLow = ap.toLowerCase();
+        let h=parseInt(hStr,10)||0;
+        const apLow=ap.toLowerCase();
         if(apLow==='오전'||apLow==='am'){ if(h===12) h=0; } else { if(h<12) h+=12; }
-        out.time = `${pad(h)}:${mm2}`;
-      }else{
-        out.time = normalizeToHHMM(`${hStr}:${mm2}`);
-      }
+        out.time=`${pad(h)}:${mm2}`;
+      }else out.time=normalizeToHHMM(`${hStr}:${mm2}`);
     }
   }
   if(!out.time){
-    const t = normalizeToHHMM(s);
-    if(t) out.time = t;
+    const t=normalizeToHHMM(s); if(t) out.time=t;
   }
   return out;
 }
 
-/* ================== 날짜/시간 표시 업데이트 ================== */
+/* ================== 날짜·시간 표시 갱신 ================== */
 function setDateDisplay(iso){
-  dateHidden.value = iso || '';
+  const dateHidden=$('eventDate'), dateDisplay=$('eventDateDisplay');
+  const weekdayK=(y,m,d)=>['일','월','화','수','목','금','토'][new Date(y,m-1,d).getDay()];
+  dateHidden.value=iso||'';
   if(iso){
-    const [yy,mm,dd] = iso.split('-').map(n=>+n);
-    dateDisplay.value = pretty(iso);
-    dateSelectedText.textContent = `선택된 날짜: ${pretty(iso)}(${weekdayK(yy,mm,dd)})`;
+    const[yy,mm,dd]=iso.split('-').map(n=>+n);
+    dateDisplay.value=pretty(iso);
+    $('dateSelectedText').textContent=`선택된 날짜: ${pretty(iso)}(${weekdayK(yy,mm,dd)})`;
   }else{
-    dateDisplay.value = '';
-    dateSelectedText.textContent = '';
+    dateDisplay.value=''; $('dateSelectedText').textContent='';
   }
 }
 function setTimeDisplay(v){
-  const norm = normalizeToHHMM(v);
+  const timeHidden=$('eventTime'), timeDisplay=$('eventTimeDisplay');
+  function to12h(h24){
+    const n=parseInt(h24,10);
+    if(isNaN(n)) return {ampm:'오전',h:'12'};
+    if(n===0) return {ampm:'오전',h:'12'};
+    if(n===12) return {ampm:'오후',h:'12'};
+    if(n>12) return {ampm:'오후',h:String(n-12).padStart(2,'0')};
+    return {ampm:'오전',h:String(n).padStart(2,'0')};
+  }
+  const norm=normalizeToHHMM(v);
   if(norm){
-    timeHidden.value = norm;
-    const [hh,mm] = norm.split(':'); const t=to12h(hh);
-    timeDisplay.value = `${t.ampm} ${t.h}:${mm}`;
+    timeHidden.value=norm;
+    const[hh,mm]=norm.split(':'); const t=to12h(hh);
+    timeDisplay.value=`${t.ampm} ${t.h}:${mm}`;
     timeDisplay.removeAttribute('aria-invalid');
   }else{
-    timeHidden.value = ''; timeDisplay.value = '';
+    timeHidden.value=''; timeDisplay.value='';
   }
 }
 
 /* ================== AI 분석 버튼 ================== */
 $('btnCheck').addEventListener('click', async ()=>{
-  const msg = $('msg');
-  const url = $('inviteUrl').value.trim();
+  const msg=$('msg');
+  const url=$('inviteUrl').value.trim();
   if(!url){ msg.textContent="❌ 청첩장 URL을 입력하세요."; msg.style.color="red"; return; }
-
   msg.textContent="⏳ AI로 분석 중입니다..."; msg.style.color="#333";
+
   try{
-    const reqUrl = ENDPOINT + "?action=extract&url=" + encodeURIComponent(url);
-    const data = await fetchJsonWithJsonpFallback(reqUrl);
-
+    const reqUrl=ENDPOINT+"?action=extract&url="+encodeURIComponent(url);
+    const data=await fetchJsonWithJsonpFallback(reqUrl);
     if(data && data.ok){
-      const payload = (data.data || {});
-      groomFather.value = payload.groomFather || "";
-      groomMother.value = payload.groomMother || "";
-      groomOrder.value  = payload.groomOrder  || "";
-      groomName.value   = payload.groomName   || "";
-      brideFather.value = payload.brideFather || "";
-      brideMother.value = payload.brideMother || "";
-      brideOrder.value  = payload.brideOrder  || "";
-      brideName.value   = payload.brideName   || "";
+      const payload=data.data||{};
+      groomFather.value=payload.groomFather||"";
+      groomMother.value=payload.groomMother||"";
+      groomName.value  =payload.groomName  ||"";
+      brideFather.value=payload.brideFather||"";
+      brideMother.value=payload.brideMother||"";
+      brideName.value  =payload.brideName  ||"";
+      // ✅ 형제관계 커스텀 셀렉트 갱신
+      setSelectAndRefresh('groomOrder', payload.groomOrder);
+      setSelectAndRefresh('brideOrder', payload.brideOrder);
 
-      const dateRaw = payload.eventDate || payload.date || "";
-      const timeRaw = payload.eventTime || payload.time || "";
-      const dtFromTime = extractDateAndTimeKR(timeRaw);
-      const dtFromDate = extractDateAndTimeKR(dateRaw);
-      const finalDate = dtFromTime.date || dtFromDate.date || dateRaw || "";
-      const finalTime = normalizeToHHMM(timeRaw) || dtFromTime.time || normalizeToHHMM(dtFromDate.time||"") || "";
+      const dateRaw=payload.eventDate||payload.date||"";
+      const timeRaw=payload.eventTime||payload.time||"";
+      const dtFromTime=extractDateAndTimeKR(timeRaw);
+      const dtFromDate=extractDateAndTimeKR(dateRaw);
+      const finalDate=dtFromTime.date||dtFromDate.date||dateRaw||"";
+      const finalTime=normalizeToHHMM(timeRaw)||dtFromTime.time||normalizeToHHMM(dtFromDate.time||"")||"";
       setDateDisplay(finalDate);
       setTimeDisplay(finalTime);
 
-      venueAddr.value   = payload.venueAddr || "";
-      venueDetail.value = payload.venue     || "";
+      venueAddr.value   =payload.venueAddr||"";
+      venueDetail.value =payload.venue||"";
 
       localStorage.setItem('inviteExtractRaw', JSON.stringify(payload));
-      const aiSuggest = {
-        groomPhone: payload.groomPhone || "",
-        bridePhone: payload.bridePhone || "",
-        groomFatherPhone: payload.groomFatherPhone || "",
-        groomMotherPhone: payload.groomMotherPhone || "",
-        brideFatherPhone: payload.brideFatherPhone || "",
-        brideMotherPhone: payload.brideMotherPhone || "",
-        groomBank: payload.groomBank || "", groomAccount: payload.groomAccount || "",
-        brideBank: payload.brideBank || "", brideAccount: payload.brideAccount || "",
-        groomFatherBank: payload.groomFatherBank || "", groomFatherAccount: payload.groomFatherAccount || "",
-        groomMotherBank: payload.groomMotherBank || "", groomMotherAccount: payload.groomMotherAccount || "",
-        brideFatherBank: payload.brideFatherBank || "", brideFatherAccount: payload.brideFatherAccount || "",
-        brideMotherBank: payload.brideMotherBank || "", brideMotherAccount: payload.brideMotherAccount || ""
+
+      const aiSuggest={
+        groomPhone:payload.groomPhone||"", bridePhone:payload.bridePhone||"",
+        groomFatherPhone:payload.groomFatherPhone||"", groomMotherPhone:payload.groomMotherPhone||"",
+        brideFatherPhone:payload.brideFatherPhone||"", brideMotherPhone:payload.brideMotherPhone||"",
+        groomBank:payload.groomBank||"", groomAccount:payload.groomAccount||"",
+        brideBank:payload.brideBank||"", brideAccount:payload.brideAccount||"",
+        groomFatherBank:payload.groomFatherBank||"", groomFatherAccount:payload.groomFatherAccount||"",
+        groomMotherBank:payload.groomMotherBank||"", groomMotherAccount:payload.groomMotherAccount||"",
+        brideFatherBank:payload.brideFatherBank||"", brideFatherAccount:payload.brideFatherAccount||"",
+        brideMotherBank:payload.brideMotherBank||"", brideMotherAccount:payload.brideMotherAccount||""
       };
       localStorage.setItem('ai_suggestions', JSON.stringify(aiSuggest));
 
       msg.textContent="✅ AI로 예식 정보가 입력되었습니다. 확인 바랍니다."; msg.style.color="green";
-      // 커스텀 셀렉트 표시 텍스트 갱신
-      document.querySelectorAll('select[data-ui="custom-select"]').forEach(enhanceSelect);
     }else{
       throw new Error(data && data.error ? data.error : "Unknown");
     }
   }catch(err){
-    msg.textContent = "❌ 분석 실패: " + err.message;
-    msg.style.color="red";
+    msg.textContent="❌ 분석 실패: "+err.message; msg.style.color="red";
   }
 });
 
@@ -752,7 +593,7 @@ $('btnNext').addEventListener('click', ()=>{
   for(const field of requiredFields){
     const el=$(field.id);
     if(!el || !String(el.value).trim()){
-      alert("❌ 필수 입력값이 누락되었습니다: " + field.label);
+      alert("❌ 필수 입력값이 누락되었습니다: "+field.label);
       return;
     }
   }
@@ -774,13 +615,12 @@ $('btnNext').addEventListener('click', ()=>{
     isSmallWedding:$('isSmallWeddingInput').value,
     flower:$('flowerInput').value
   };
-  const raw = localStorage.getItem('inviteExtractRaw') || '';
-  if(raw) info._extract = JSON.parse(raw);
+  const raw=localStorage.getItem('inviteExtractRaw')||'';
+  if(raw) info._extract=JSON.parse(raw);
   localStorage.setItem('inviteInfo', JSON.stringify(info));
   location.href='wedding_detail.html';
 });
 </script>
-
 
 <!-- Daum Postcode API -->
 <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
