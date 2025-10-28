@@ -182,421 +182,355 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    /* ===== 환경설정 ===== */
-    // ✅ GAS 웹앱 엔드포인트 (CORS 허용, Code.gs의 doPost/doGet와 연계)
-    const ENDPOINT = "https://script.google.com/macros/s/AKfycbwsBf2tcQ_17Fpu_yDcEcn4uQDnZ0T8bU5L9KJtkgCCvXOsn5IfKEwVTP5_o7-fQmbvww/exec";
+/* ================== 설정 ================== */
+/** ✅ 실제 웹앱 URL로 교체 */
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbwsBf2tcQ_17Fpu_yDcEcn4uQDnZ0T8bU5L9KJtkgCCvXOsn5IfKEwVTP5_o7-fQmbvww/exec";
 
-    /* ===== 이전 페이지 저장값 로드 (inviteInfo) ===== */
-    const KEYMAP = {
-      groom: ['groomName','groom','groom_name'],
-      bride: ['brideName','bride','bride_name'],
-      groomFather: ['groomFather','groom_father','groomFatherName'],
-      groomMother: ['groomMother','groom_mother','groomMotherName'],
-      brideFather: ['brideFather','bride_father','brideFatherName'],
-      brideMother: ['brideMother','bride_mother','brideMotherName']
-    };
-    const pick = (obj, keys) => { for (const k of keys) if (obj && obj[k]) return String(obj[k]); return ''; };
-
-    function readPrev() {
-      let base = {};
-      try {
-        const s = localStorage.getItem('inviteInfo') || localStorage.getItem('weddingForm');
-        if (s) base = JSON.parse(s);
-      } catch {}
-      const flat = {};
-      Object.values(KEYMAP).flat().forEach(k=>{
-        const v = localStorage.getItem(k);
-        if (v) flat[k] = v;
-      });
-      const src = { ...base, ...flat };
-
-      // __extract 및 ai_suggestions
-      let extract = {};
-      try { extract = JSON.parse(localStorage.getItem('inviteExtractRaw') || '{}'); } catch {}
-      let ai = {};
-      try { ai = JSON.parse(localStorage.getItem('ai_suggestions') || '{}'); } catch {}
-
-      return {
-        src,
-        extract,
-        ai,
-        groom:       pick(src, KEYMAP.groom),
-        bride:       pick(src, KEYMAP.bride),
-        groomFather: pick(src, KEYMAP.groomFather),
-        groomMother: pick(src, KEYMAP.groomMother),
-        brideFather: pick(src, KEYMAP.brideFather),
-        brideMother: pick(src, KEYMAP.brideMother),
-        eventDate:   src.eventDate || '', // YYYY-MM-DD
-        eventTime:   src.eventTime || '', // HH:MM(24h)
-        venueAddr:   src.venueAddr || '',
-        venueDetail: src.venueDetail || '',
-        venueTel:    (extract.venueTel || '')
-      };
-    }
-    const WF = readPrev();
-
-    /* ===== 상태/유틸 ===== */
-    const state = {
-      side:'', person:'', status:'',
-      dept:'', title:'', curCombined:'',
-      act:'', who:'', spouseCombined:'',
-      bank:'', account:'', phone:'', open:''
-    };
-    const el=(id)=>document.getElementById(id);
-    const show=(x)=>x.classList.remove('hidden');
-    const hide=(x)=>x.classList.add('hidden');
-    const enable=(b)=>{b.classList.remove('disabled');b.removeAttribute('aria-disabled');};
-    const disable=(b)=>{b.classList.add('disabled');b.setAttribute('aria-disabled','true');};
-    const enableSubmit=()=>el('btn-submit').removeAttribute('disabled');
-    const disableSubmit=()=>el('btn-submit').setAttribute('disabled','');
-    const press=(btn,on)=>{btn.setAttribute('aria-pressed',String(!!on)); if(on){btn.classList.add('is-selected');}else{btn.classList.remove('is-selected');}};
-    const toast=(msg)=>{const t=el('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',2000);}
-
-    const secPerson=el('sec-person'),secStatus=el('sec-status'),secOnjob=el('sec-onjob'),
-          secRetire=el('sec-retire'),secAct=el('sec-act'),secAccount=el('sec-account'),
-          secPhone=el('sec-phone'),secOpen=el('sec-open'),secPreview=el('sec-preview'),err=el('err');
-
-    function roleLabel(role, name) { return name ? `${role} · ${name}` : `${role} · 성함 없음`; }
-
-    /* ===== GAS 전송 ===== */
-    async function sendAnnouncement(subject, body) {
-      const payload = { action: "sendAnnouncement", subject, body };
-      const res = await fetch(ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type":"application/json" },
-        body: JSON.stringify(payload)
-      });
-      if(!res.ok){
-        const txt = await res.text().catch(()=> "");
-        throw new Error(`메일 전송 실패(HTTP ${res.status}) ${txt?'- '+txt.slice(0,200):''}`);
-      }
-      const j = await res.json().catch(()=> ({}));
-      if(!j.ok) throw new Error(j.error || "메일 전송 실패");
-      return j;
-    }
-
-    /* ====== 🔹 AI 제안 로드 & 자동 프리필 ====== */
-    // 측/인물 조합 → (bank, account, phone) 제안값 선택
-    function pickSuggestion(side, person) {
-      const AI = WF.ai || {};
-      const map = {
-        groom: {
-          father: { bank: AI.groomFatherBank, account: AI.groomFatherAccount, phone: AI.groomFatherPhone },
-          mother: { bank: AI.groomMotherBank, account: AI.groomMotherAccount, phone: AI.groomMotherPhone },
-          self:   { bank: AI.groomBank,       account: AI.groomAccount,       phone: AI.groomPhone }
-        },
-        bride: {
-          father: { bank: AI.brideFatherBank, account: AI.brideFatherAccount, phone: AI.brideFatherPhone },
-          mother: { bank: AI.brideMotherBank, account: AI.brideMotherAccount, phone: AI.brideMotherPhone },
-          self:   { bank: AI.brideBank,       account: AI.brideAccount,       phone: AI.bridePhone }
+/* ================== 공통: JSONP 폴백 유틸 ================== */
+/** fetch가 CORS/500 등으로 실패하면 JSONP로 자동 재시도 */
+async function fetchJsonWithJsonpFallback(url) {
+  try {
+    const res = await fetch(url, { method: "GET" });
+    if (res.ok) return await res.json();
+    throw new Error(`HTTP ${res.status}`);
+  } catch (_) {
+    return new Promise((resolve, reject) => {
+      const cb = `__gas_cb_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      window[cb] = (data) => {
+        try { resolve(data); }
+        finally {
+          delete window[cb];
+          if (s && s.parentNode) s.parentNode.removeChild(s);
         }
       };
-      const o = (map[side] && map[side][person]) || {};
-      return { bank:(o.bank||'').trim(), account:(o.account||'').trim(), phone:(o.phone||'').trim() };
-    }
-
-    // 입력칸에 제안값 반영 (빈 칸일 때만)
-    function applySuggestionToInputs(sug) {
-      const bankSelect = el('bankSelect');
-      const bankInput  = el('bankInput');
-      const accountEl  = el('account');
-      const phoneEl    = el('phone');
-
-      // 은행
-      if (sug.bank) {
-        const hasOpt = [...bankSelect.options].some(o => (o.textContent === sug.bank || o.value === sug.bank));
-        if (hasOpt) {
-          bankSelect.value = sug.bank;
-          bankInput.classList.add('hidden');
-          bankSelect.classList.remove('hidden');
-          state.bank = bankSelect.value;
-        } else {
-          bankSelect.value = "__custom__";
-          bankSelect.classList.add('hidden');
-          bankInput.classList.remove('hidden');
-          if (!bankInput.value) bankInput.value = sug.bank;
-          state.bank = bankInput.value.trim();
-        }
-      }
-
-      // 계좌
-      if (sug.account && !accountEl.value) {
-        accountEl.value = sug.account;
-        state.account = sug.account;
-      }
-
-      // 전화
-      if (sug.phone && !phoneEl.value) {
-        phoneEl.value = sug.phone;
-        state.phone = sug.phone;
-      }
-
-      validate();
-    }
-
-    /* ===== 측 선택 ===== */
-    function selectSide(side){
-      state.side=side;
-      press(el('btn-groom-side'), side==='groom');
-      press(el('btn-bride-side'), side==='bride');
-      if(side==='groom'){
-        el('btn-father').textContent=roleLabel('아버지',WF.groomFather);
-        el('btn-mother').textContent=roleLabel('어머니',WF.groomMother);
-        el('btn-self').textContent=roleLabel('본인',WF.groom);
-      }else{
-        el('btn-father').textContent=roleLabel('아버지',WF.brideFather);
-        el('btn-mother').textContent=roleLabel('어머니',WF.brideMother);
-        el('btn-self').textContent=roleLabel('본인',WF.bride);
-      }
-      show(secPerson);
-
-      // 측만 선택해도 '본인' 기준 우선 프리필
-      applySuggestionToInputs(pickSuggestion(state.side, 'self'));
-    }
-    el('btn-groom-side').addEventListener('click',()=>selectSide('groom'));
-    el('btn-bride-side').addEventListener('click',()=>selectSide('bride'));
-
-    /* ===== 성함 선택 ===== */
-    function selectPerson(p){
-      state.person=p;
-      press(el('btn-father'),p==='father');
-      press(el('btn-mother'),p==='mother');
-      press(el('btn-self'),  p==='self');
-      show(secStatus);
-
-      applySuggestionToInputs(pickSuggestion(state.side, state.person));
-    }
-    el('btn-father').addEventListener('click',()=>selectPerson('father'));
-    el('btn-mother').addEventListener('click',()=>selectPerson('mother'));
-    el('btn-self').addEventListener('click',()=>selectPerson('self'));
-
-    /* ===== 재직/퇴임 ===== */
-    function selectStatus(s){
-      state.status=s;
-      press(el('btn-onjob'), s==='재직');
-      press(el('btn-retire'),s==='퇴임');
-
-      if(s==='퇴임'){
-        el('lbl-dept').innerHTML='근무 부서 <span class="muted">(재직시)</span>';
-        el('lbl-title').innerHTML='직책 <span class="muted">(재직시)</span>';
-        show(secOnjob);
-        show(secRetire);
-      }else{
-        el('lbl-dept').innerHTML='근무 부서<span class="req">*</span>';
-        el('lbl-title').innerHTML='직책<span class="req">*</span>';
-        show(secOnjob);
-        hide(secRetire);
-      }
-
-      show(secAct); show(secAccount); show(secPhone); show(secOpen); show(secPreview);
-      validate();
-    }
-    el('btn-onjob').addEventListener('click',()=>selectStatus('재직'));
-    el('btn-retire').addEventListener('click',()=>selectStatus('퇴임'));
-
-    /* ===== 은행 선택/직접입력 ===== */
-    const bankSelect=el('bankSelect'), bankInput=el('bankInput');
-    function syncBankState(){
-      if(bankSelect && bankSelect.value==='__custom__'){
-        bankSelect.classList.add('hidden');
-        bankInput.classList.remove('hidden');
-        bankInput.focus();
-        state.bank = bankInput.value.trim();
-      }else if(bankSelect){
-        bankInput.classList.add('hidden');
-        bankSelect.classList.remove('hidden');
-        state.bank = bankSelect.value.trim();
-      }
-      validate();
-    }
-    bankSelect.addEventListener('change', syncBankState);
-    bankInput.addEventListener('input', ()=>{ state.bank=bankInput.value.trim(); validate(); });
-
-    /* ===== 입력 바인딩 ===== */
-    ['dept','title','curCombined','spouseCombined'].forEach(id=>el(id)?.addEventListener('input',e=>{
-      state[id]=e.target.value.trim();
-      validate();
-    }));
-    el('account').addEventListener('input',e=>{ state.account=e.target.value; validate(); });
-    el('phone').addEventListener('input',e=>{ state.phone=e.target.value; validate(); });
-
-    /* ===== 청탁금지법 ===== */
-    function selectAct(v){
-      state.act=v;
-      press(el('btn-act-no'), v==='비대상');
-      press(el('btn-act-yes'), v==='대상');
-      if(v==='대상'){
-        show(el('act-extra'));
-      } else {
-        hide(el('act-extra'));
-        state.who='';
-        press(el('btn-who-self'), false);
-        press(el('btn-who-spouse'), false);
-        hide(el('spouse-wrap'));
-        state.spouseCombined='';
-      }
-      validate();
-    }
-    el('btn-act-no').addEventListener('click',()=>selectAct('비대상'));
-    el('btn-act-yes').addEventListener('click',()=>selectAct('대상'));
-
-    function selectWho(v){
-      state.who=v;
-      press(el('btn-who-self'), v==='본인');
-      press(el('btn-who-spouse'), v==='배우자');
-      if(v==='배우자'){ show(el('spouse-wrap')); } else { hide(el('spouse-wrap')); state.spouseCombined=''; }
-      validate();
-    }
-    el('btn-who-self').addEventListener('click',()=>selectWho('본인'));
-    el('btn-who-spouse').addEventListener('click',()=>selectWho('배우자'));
-
-    /* ===== 계좌공개 ===== */
-    function selectOpen(v){ state.open=v; press(el('btn-open-yes'),v==='희망'); press(el('btn-open-no'),v==='비희망'); validate(); }
-    el('btn-open-yes').addEventListener('click',()=>selectOpen('희망'));
-    el('btn-open-no').addEventListener('click',()=>selectOpen('비희망'));
-
-    /* ===== 검증 ===== */
-    function validate(){
-      err.classList.add('hidden'); err.textContent='';
-
-      if(!state.side||!state.person||!state.status){ disable(el('btn-preview')); disableSubmit(); return; }
-
-      if(state.status==='재직'){
-        if(!state.dept||!state.title){ disable(el('btn-preview')); disableSubmit(); return; }
-      }else{ // 퇴임
-        if(!state.dept||!state.title||!state.curCombined){ disable(el('btn-preview')); disableSubmit(); return; }
-      }
-
-      if(state.act==='대상' && !state.who){ disable(el('btn-preview')); disableSubmit(); return; }
-      if(state.who==='배우자' && !state.spouseCombined.trim()){ disable(el('btn-preview')); disableSubmit(); return; }
-
-      if(!state.bank){ disable(el('btn-preview')); disableSubmit(); return; }
-      if(!/^[0-9-]{6,}$/.test(state.account)){ disable(el('btn-preview')); disableSubmit(); return; }
-      if(!/^[0-9-]{10,13}$/.test(state.phone)){ disable(el('btn-preview')); disableSubmit(); return; }
-
-      if(!state.open){ disable(el('btn-preview')); disableSubmit(); return; }
-
-      enable(el('btn-preview')); enableSubmit();
-    }
-
-    /* ===== 날짜/요일/포맷 유틸 ===== */
-    function parseISO(d){ if(!d) return null; const [y,m,dd]=d.split('-').map(n=>+n); return new Date(y,(m-1),dd); }
-    function weekdayChJp(date){
-      const map = ['日','月','火','水','木','金','土']; // 예시 제목처럼 土 사용
-      return map[date.getDay()];
-    }
-    function mdLabel(date){ return `${date.getMonth()+1}.${date.getDate()}`; }
-
-    /* ===== 규칙 기반 문안 생성 ===== */
-    function buildTitleAndBody(){
-      const d = parseISO(WF.eventDate);
-      const w = d ? weekdayChJp(d) : '';
-      const md = d ? mdLabel(d) : '';
-
-      // 1) 재직/퇴임 라벨
-      const corp = (state.status==='재직') ? '삼성전자' : '전)삼성전자';
-
-      // 선택된 사람(표기 이름)
-      const nameSet = (state.side==='groom')
-        ? { father:WF.groomFather, mother:WF.groomMother, self:WF.groom }
-        : { father:WF.brideFather, mother:WF.brideMother, self:WF.bride };
-      const subjectName = nameSet[state.person] || '';
-
-      // 2) 장남/장녀 등 문구(상부 노출)
-      //   - 신랑측: "아들" 기준: 장남/차남/…
-      //   - 신부측: "딸"  기준: 장녀/차녀/…
-      const upperLine = (() => {
-        const gLine = `${WF.groomFather || ''} · ${WF.groomMother || ''} 의 ${WF.groomOrder || ''} ${WF.groom || ''}`.trim();
-        const bLine = `${WF.brideFather || ''} · ${WF.brideMother || ''} 의 ${WF.brideOrder || ''} ${WF.bride || ''}`.trim();
-        if(state.side==='groom'){
-          // 임원 가족 정보 상부 노출: 여기서는 선택측을 1행에, 상대측을 2행에
-          return `${gLine}\n${bLine}`;
-        }else{
-          return `${bLine}\n${gLine}`;
-        }
-      })();
-
-      // 3) 식장 정보: 상부 식장명/홀, 하단 주소/전화
-      const venueNameHall = WF.venueDetail || ''; // 호텔명/홀명 등
-      const venueLower = `${WF.venueAddr || ''}${WF.venueTel ? `\n                (TEL : ${WF.venueTel})` : ''}`;
-
-      // 연락처 표기: "(이름 직책)" 형태
-      const contactTail = state.title ? ` (${subjectName} ${state.title})` : ` (${subjectName})`;
-
-      // 축의계좌 표기: "(예금주 이름)" → 선택자 기준
-      const acctTail = ` (${subjectName})`;
-
-      // 4) 청탁금지법 라인
-      const actLine = (state.act==='대상') ? '※ 청탁금지법 대상' : '※ 청탁금지법 비대상';
-
-      // ===== 제목 & 본문 조립 =====
-      const subject = `＜화혼＞ ${corp} ${state.dept || ''} ${subjectName} ${state.title || ''} ${ (state.side==='groom') ? (WF.groomOrder||'')+'결혼' : (WF.brideOrder||'')+'결혼' }(${md} ${w})`.replace(/\s+/g,' ').trim();
-
-      const bodyLines = [];
-      bodyLines.push(`${corp} ${state.dept || ''} ${subjectName} ${state.title || ''} ${(state.side==='groom')?'장남결혼':'장녀결혼'}을 안내하오니 많은 축하 부탁드립니다.`);
-      bodyLines.push('');
-      bodyLines.push(upperLine);
-      bodyLines.push('');
-      bodyLines.push(`□ 일   시 : ${WF.eventDate ? WF.eventDate.replace(/-/g,'년 ').replace(/-(\d{2})$/,'월 $1일') : ''} ${WF.eventTime ? formatKoreanTime(WF.eventTime) : ''}`);
-      bodyLines.push(`□ 장   소 : ${venueNameHall}`);
-      bodyLines.push(`                ${venueLower}`);
-      bodyLines.push(`□ 연락처 : ${state.phone}${contactTail}`);
-      bodyLines.push(`□ 축의금 전달계좌 : ${state.bank} ${state.account}${acctTail}`);
-      bodyLines.push(actLine);
-
-      return { subject, body: bodyLines.join('\n') };
-    }
-
-    function formatKoreanTime(hhmm){
-      // HH:MM(24h) → "오전/오후 H:MM"
-      const [h,m] = hhmm.split(':').map(n=>+n);
-      const am = (h<12);
-      const h12 = (h%12)||12;
-      return `${am?'오전':'오후'} ${String(h12)}:${String(m).padStart(2,'0')}`;
-    }
-
-    /* ===== 미리보기/제출 ===== */
-    function buildPreview(){
-      const {subject, body} = buildTitleAndBody();
-      return {subject, body};
-    }
-
-    el('btn-preview').addEventListener('click',()=>{
-      if(el('btn-preview').hasAttribute('aria-disabled')) return;
-      const p = buildPreview();
-      el('previewSubject').textContent = p.subject;
-      el('previewBody').textContent = p.body;
-      el('dlg').showModal();
+      const join = url.includes("?") ? "&" : "?";
+      const s = document.createElement("script");
+      s.src = `${url}${join}callback=${cb}`;
+      s.onerror = () => { delete window[cb]; reject(new Error("JSONP failed")); };
+      document.head.appendChild(s);
     });
-    el('dlg-cancel').addEventListener('click',()=>el('dlg').close());
-    el('dlg-ok').addEventListener('click', async ()=>{
-      try{
-        const p = buildPreview();
-        const r = await sendAnnouncement(p.subject, p.body);
-        el('dlg').close();
-        toast('메일로 전송되었습니다.');
-      }catch(e){
-        toast(e.message || '전송 실패');
-      }
-    });
+  }
+}
 
-    function submitLocal(){
-      localStorage.setItem('weddingDetail', JSON.stringify(state));
-      toast('임시 저장되었습니다.');
+/* ================== 저장값/AI 제안 로드 ================== */
+const el = (id) => document.getElementById(id);
+const show = (x) => x.classList.remove('hidden');
+const hide = (x) => x.classList.add('hidden');
+const press = (btn,on)=>{btn.setAttribute('aria-pressed',String(!!on));btn.classList.toggle('is-selected',!!on);};
+
+function readPrev() {
+  let base = {};
+  try { base = JSON.parse(localStorage.getItem('inviteInfo') || '{}'); } catch {}
+  const out = {
+    groom: base.groomName || '',
+    bride: base.brideName || '',
+    groomFather: base.groomFather || '',
+    groomMother: base.groomMother || '',
+    brideFather: base.brideFather || '',
+    brideMother: base.brideMother || '',
+  };
+  return out;
+}
+const WF = readPrev();
+
+let AI = {};
+try { AI = JSON.parse(localStorage.getItem('ai_suggestions') || '{}'); } catch { AI = {}; }
+
+/* ================== 상태 ================== */
+const state = {
+  side:'', person:'', status:'',
+  dept:'', title:'', curCombined:'',
+  act:'', who:'', spouseCombined:'',
+  bank:'', account:'', phone:'', open:''
+};
+
+/* ================== UI 바인딩 (원래 코드 유지) ================== */
+const secPerson=el('sec-person'),secStatus=el('sec-status'),secOnjob=el('sec-onjob'),
+      secRetire=el('sec-retire'),secAct=el('sec-act'),secAccount=el('sec-account'),
+      secPhone=el('sec-phone'),secOpen=el('sec-open'),secPreview=el('sec-preview'),
+      err=el('err');
+
+function roleLabel(role, name) { return name ? `${role} · ${name}` : `${role} · 성함 없음`; }
+
+function pickSuggestion(side, person) {
+  const map = {
+    groom: {
+      father: { bank: AI.groomFatherBank, account: AI.groomFatherAccount, phone: AI.groomFatherPhone },
+      mother: { bank: AI.groomMotherBank, account: AI.groomMotherAccount, phone: AI.groomMotherPhone },
+      self:   { bank: AI.groomBank,       account: AI.groomAccount,       phone: AI.groomPhone }
+    },
+    bride: {
+      father: { bank: AI.brideFatherBank, account: AI.brideFatherAccount, phone: AI.brideFatherPhone },
+      mother: { bank: AI.brideMotherBank, account: AI.brideMotherAccount, phone: AI.brideMotherPhone },
+      self:   { bank: AI.brideBank,       account: AI.brideAccount,       phone: AI.bridePhone }
     }
-    document.getElementById('btn-submit').addEventListener('click',()=>{
-      if(!el('btn-submit').hasAttribute('disabled')) submitLocal();
-    });
+  };
+  const o = (map[side] && map[side][person]) || {};
+  return { bank:(o.bank||'').trim(), account:(o.account||'').trim(), phone:(o.phone||'').trim() };
+}
+function applySuggestionToInputs(sug) {
+  const bankSelect = el('bankSelect');
+  const bankInput  = el('bankInput');
+  const accountEl  = el('account');
+  const phoneEl    = el('phone');
 
-    // 초기 검증
-    // 페이지 진입 시, WF 값 일부 힌트
-    (function initHints(){
-      if(!WF.eventDate || !WF.venueDetail){
-        console.warn('inviteInfo 일부 값이 비어있습니다.', WF);
-      }
-    })();
+  if (sug.bank) {
+    const hasOpt = [...bankSelect.options].some(o => (o.textContent === sug.bank || o.value === sug.bank));
+    if (hasOpt) {
+      bankSelect.value = sug.bank;
+      bankInput.classList.add('hidden');
+      bankSelect.classList.remove('hidden');
+      state.bank = bankSelect.value;
+    } else {
+      bankSelect.value = "__custom__";
+      bankSelect.classList.add('hidden');
+      bankInput.classList.remove('hidden');
+      if (!bankInput.value) bankInput.value = sug.bank;
+      state.bank = bankInput.value.trim();
+    }
+  }
+  if (sug.account && !accountEl.value) { accountEl.value = sug.account; state.account = sug.account; }
+  if (sug.phone && !phoneEl.value)     { phoneEl.value   = sug.phone;   state.phone   = sug.phone; }
+  validate();
+}
 
-    validate();
-  </script>
+/* 측 선택 */
+function selectSide(side){
+  state.side=side;
+  press(el('btn-groom-side'), side==='groom');
+  press(el('btn-bride-side'), side==='bride');
+  if(side==='groom'){
+    el('btn-father').textContent=roleLabel('아버지',WF.groomFather);
+    el('btn-mother').textContent=roleLabel('어머니',WF.groomMother);
+    el('btn-self').textContent=roleLabel('본인',WF.groom);
+  }else{
+    el('btn-father').textContent=roleLabel('아버지',WF.brideFather);
+    el('btn-mother').textContent=roleLabel('어머니',WF.brideMother);
+    el('btn-self').textContent=roleLabel('본인',WF.bride);
+  }
+  show(secPerson);
+  applySuggestionToInputs(pickSuggestion(state.side, 'self'));
+}
+el('btn-groom-side').addEventListener('click',()=>selectSide('groom'));
+el('btn-bride-side').addEventListener('click',()=>selectSide('bride'));
+
+/* 성함 선택 */
+function selectPerson(p){
+  state.person=p;
+  press(el('btn-father'),p==='father');
+  press(el('btn-mother'),p==='mother');
+  press(el('btn-self'),  p==='self');
+  show(secStatus);
+  applySuggestionToInputs(pickSuggestion(state.side, state.person));
+}
+el('btn-father').addEventListener('click',()=>selectPerson('father'));
+el('btn-mother').addEventListener('click',()=>selectPerson('mother'));
+el('btn-self').addEventListener('click',()=>selectPerson('self'));
+
+/* 재직/퇴임 */
+function selectStatus(s){
+  state.status=s;
+  press(el('btn-onjob'), s==='재직');
+  press(el('btn-retire'),s==='퇴임');
+
+  if(s==='퇴임'){
+    el('lbl-dept').innerHTML='근무 부서 <span class="muted">(재직시)</span>';
+    el('lbl-title').innerHTML='직책 <span class="muted">(재직시)</span>';
+    show(secOnjob); show(secRetire);
+  }else{
+    el('lbl-dept').innerHTML='근무 부서<span class="req">*</span>';
+    el('lbl-title').innerHTML='직책<span class="req">*</span>';
+    show(secOnjob); hide(secRetire);
+  }
+
+  show(secAct); show(secAccount); show(secPhone); show(secOpen); show(secPreview);
+  validate();
+}
+el('btn-onjob').addEventListener('click',()=>selectStatus('재직'));
+el('btn-retire').addEventListener('click',()=>selectStatus('퇴임'));
+
+/* 은행 선택/직접입력 */
+const bankSelect=el('bankSelect'), bankInput=el('bankInput');
+function syncBankState(){
+  if(bankSelect && bankSelect.value==='__custom__'){
+    bankSelect.classList.add('hidden');
+    bankInput.classList.remove('hidden');
+    bankInput.focus();
+    state.bank = bankInput.value.trim();
+  }else if(bankSelect){
+    bankInput.classList.add('hidden');
+    bankSelect.classList.remove('hidden');
+    state.bank = bankSelect.value.trim();
+  }
+  validate();
+}
+bankSelect.addEventListener('change', syncBankState);
+bankInput.addEventListener('input', ()=>{ state.bank=bankInput.value.trim(); validate(); });
+
+/* 입력 바인딩 */
+['dept','title','curCombined','spouseCombined'].forEach(id=>el(id)?.addEventListener('input',e=>{
+  state[id]=e.target.value.trim(); validate();
+}));
+el('account').addEventListener('input',e=>{ state.account=e.target.value; validate(); });
+el('phone').addEventListener('input',e=>{ state.phone=e.target.value; validate(); });
+
+/* 청탁금지법 */
+function selectAct(v){
+  state.act=v;
+  press(el('btn-act-no'), v==='비대상');
+  press(el('btn-act-yes'), v==='대상');
+  if(v==='대상'){ show(el('act-extra')); }
+  else { hide(el('act-extra')); state.who=''; press(el('btn-who-self'),false); press(el('btn-who-spouse'),false); hide(el('spouse-wrap')); state.spouseCombined=''; }
+  validate();
+}
+el('btn-act-no').addEventListener('click',()=>selectAct('비대상'));
+el('btn-act-yes').addEventListener('click',()=>selectAct('대상'));
+
+function selectWho(v){
+  state.who=v;
+  press(el('btn-who-self'), v==='본인');
+  press(el('btn-who-spouse'), v==='배우자');
+  if(v==='배우자'){ show(el('spouse-wrap')); } else { hide(el('spouse-wrap')); state.spouseCombined=''; }
+  validate();
+}
+el('btn-who-self').addEventListener('click',()=>selectWho('본인'));
+el('btn-who-spouse').addEventListener('click',()=>selectWho('배우자'));
+
+/* 계좌공개 */
+function selectOpen(v){ state.open=v; press(el('btn-open-yes'),v==='희망'); press(el('btn-open-no'),v==='비희망'); validate(); }
+el('btn-open-yes').addEventListener('click',()=>selectOpen('희망'));
+el('btn-open-no').addEventListener('click',()=>selectOpen('비희망'));
+
+/* 검증 */
+function validate(){
+  const btnPrev = el('btn-preview');
+  const btnSubmit = el('btn-submit');
+  const disable = ()=>{
+    btnPrev.classList.add('disabled'); btnPrev.setAttribute('aria-disabled','true');
+    btnSubmit.setAttribute('disabled','');
+  };
+  const enable = ()=>{
+    btnPrev.classList.remove('disabled'); btnPrev.removeAttribute('aria-disabled');
+    btnSubmit.removeAttribute('disabled');
+  };
+
+  err.classList.add('hidden'); err.textContent='';
+  if(!state.side||!state.person||!state.status) return disable();
+  if(state.status==='재직'){
+    if(!state.dept||!state.title) return disable();
+  }else{
+    if(!state.dept||!state.title||!state.curCombined) return disable();
+  }
+  if(state.act==='대상' && !state.who) return disable();
+  if(state.who==='배우자' && !state.spouseCombined.trim()) return disable();
+  if(!state.bank) return disable();
+  if(!/^[0-9-]{6,}$/.test(state.account)) return disable();
+  if(!/^[0-9-]{10,13}$/.test(state.phone)) return disable();
+  if(!state.open) return disable();
+  enable();
+}
+
+/* 미리보기 본문 구성 (요청 양식 규칙 반영) */
+function buildNoticeBody() {
+  // 상단 템플릿(예시): 여기선 Wedding(기본 정보)도 활용 가능
+  const base = JSON.parse(localStorage.getItem('inviteInfo') || '{}');
+
+  // 재직/퇴임 prefix
+  const prefix = (state.status==='퇴임') ? '전)삼성전자' : '삼성전자';
+
+  // 임원 가족 노출 규칙(간략 적용): 선택된 측/인물 중심 표기
+  const sideKo = state.side==='groom'?'신랑측':'신부측';
+  const names = state.side==='groom'
+    ? { f: WF.groomFather, m: WF.groomMother, c: WF.groom }
+    : { f: WF.brideFather, m: WF.brideMother, c: WF.bride };
+
+  // 본문 예시 (필요 시 사용자 규칙 더 세분화 가능)
+  const lines = [];
+  lines.push(`${prefix} ${state.title || ''} ${names.c || ''} ${state.person==='self'?'본인':(state.person==='father'?'아버지':'어머니')} 안내`);
+  lines.push('');
+  lines.push(`${names.f || ''} · ${names.m || ''} 의 ${state.side==='groom'?(base.groomOrder||'자녀'):(base.brideOrder||'자녀')} ${names.c || ''}`);
+  lines.push('');
+  lines.push(`□ 연락처 : ${state.phone}`);
+  lines.push(`□ 축의금 전달계좌 : ${state.bank} ${state.account} (${names.c || ''})`);
+  lines.push(`※ 청탁금지법 ${state.act || '미선택'}`);
+
+  return lines.join('\n');
+}
+
+/* 미리보기 모달 */
+function buildPreview(){
+  const sideKo=state.side==='groom'?'신랑측':'신부측';
+  const nameSet=state.side==='groom'
+    ? {father:WF.groomFather,mother:WF.groomMother,self:WF.groom}
+    : {father:WF.brideFather,mother:WF.brideMother,self:WF.bride};
+  const whoName=state.person==='father'?'아버지':(state.person==='mother'?'어머니':'본인');
+  const subjectName=nameSet[state.person]||'(성함 미입력)';
+  const lines=[];
+  lines.push(`[${sideKo}] ${whoName}: ${subjectName}`);
+  lines.push(`삼성전자 재직여부: ${state.status}`);
+  lines.push(`부서/직책(재직시): ${state.dept||'-'} / ${state.title||'-'}`);
+  if(state.status==='퇴임'){lines.push(`현직장/직책: ${state.curCombined||'-'}`);}
+  lines.push(`청탁금지법: ${state.act||'미선택'}`);
+  if(state.act==='대상'){lines.push(`대상 구분: ${state.who}`);}
+  if(state.who==='배우자'){lines.push(`배우자 직장/직책: ${state.spouseCombined||'-'}`);}
+  lines.push(`축의계좌: ${state.bank} ${state.account}`);
+  lines.push(`연락처(본인): ${state.phone}`);
+  lines.push(`계좌공개: ${state.open}`);
+  return lines.join('\n');
+}
+
+el('btn-preview').addEventListener('click',()=>{
+  if(el('btn-preview').hasAttribute('aria-disabled')) return;
+  el('previewText').textContent = buildPreview();
+  el('dlg').showModal();
+});
+el('dlg-cancel').addEventListener('click',()=>el('dlg').close());
+
+/* 제출(메일 전송 호출 포함) */
+async function sendNoticeViaGAS(subject, body) {
+  // Code.gs 쪽에 ?action=sendNotice 지원(RECIPIENT_EMAIL 사용) 구현되어 있다는 전제
+  const url = ENDPOINT
+    + "?action=sendNotice"
+    + "&subject=" + encodeURIComponent(subject)
+    + "&body="    + encodeURIComponent(body);
+  const res = await fetchJsonWithJsonpFallback(url);
+  if (!res || res.ok !== true) {
+    throw new Error(res && res.error ? res.error : 'sendNotice failed');
+  }
+  return res;
+}
+
+el('dlg-ok').addEventListener('click', async ()=>{
+  el('dlg').close();
+  try{
+    // 제목/본문 규칙 예시 (필요시 커스터마이즈)
+    const base = JSON.parse(localStorage.getItem('inviteInfo') || '{}');
+    const dateTxt = (base.eventDate && base.eventTime)
+      ? `${base.eventDate} ${base.eventTime}`
+      : '';
+    const placeTxt = [base.venueDetail, base.venueAddr].filter(Boolean).join(' / ');
+
+    // 제목 샘플: <화혼> 전)삼성전자 ... 형식
+    const prefix = (state.status==='퇴임') ? '전)삼성전자' : '삼성전자';
+    const mainName = (state.side==='groom') ? (WF.groom || '') : (WF.bride || '');
+    const subject = `<화혼> ${prefix} ${state.title || ''} ${mainName} 안내`;
+
+    const body = buildNoticeBody();
+
+    // (선택) 미리보기용 상세(일시/장소) 붙이고 싶으면 아래 2줄 추가
+    // const extra = [`□ 일   시 : ${dateTxt || '-'}`, `□ 장   소 : ${placeTxt || '-'}`].join('\n');
+    // const finalBody = body + '\n' + extra;
+
+    await sendNoticeViaGAS(subject, body); // or finalBody
+    alert('제출/발송 요청이 완료되었습니다.');
+  }catch(e){
+    alert('제출 실패: ' + e.message);
+  }
+});
+
+/* 즉시 초기 검증 */
+validate();
+</script>
+
 </body>
 </html>
