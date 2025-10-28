@@ -312,10 +312,10 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 
 <script>
 /* ================== 설정/상수 ================== */
-/** GAS 웹앱 배포 URL (doGet: ?action=extract&url=...) */
+/** ✅ 여기를 실제 웹앱 URL로 교체 */
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbwsBf2tcQ_17Fpu_yDcEcn4uQDnZ0T8bU5L9KJtkgCCvXOsn5IfKEwVTP5_o7-fQmbvww/exec";
 
-/** 필수 입력 항목 */
+/* 필수 입력 항목 목록 (기존 유지) */
 const requiredFields = [
   {id:"groomFather", label:"신랑 아버지 성함"},
   {id:"groomMother", label:"신랑 어머니 성함"},
@@ -331,32 +331,55 @@ const requiredFields = [
   {id:"venueDetail", label:"예식장 세부"}
 ];
 
+/* ================== JSONP 폴백 유틸 ================== */
+/** fetch가 CORS/500 등으로 실패하면 JSONP로 자동 재시도 */
+async function fetchJsonWithJsonpFallback(url) {
+  // 1) 기본 fetch 시도
+  try {
+    const res = await fetch(url, { method: "GET" });
+    if (res.ok) return await res.json();
+    throw new Error(`HTTP ${res.status}`);
+  } catch (_) {
+    // 2) JSONP 폴백
+    return new Promise((resolve, reject) => {
+      const cb = `__gas_cb_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      window[cb] = (data) => {
+        try { resolve(data); }
+        finally {
+          delete window[cb];
+          if (s && s.parentNode) s.parentNode.removeChild(s);
+        }
+      };
+      const join = url.includes("?") ? "&" : "?";
+      const s = document.createElement("script");
+      s.src = `${url}${join}callback=${cb}`;
+      s.onerror = () => { delete window[cb]; reject(new Error("JSONP failed")); };
+      document.head.appendChild(s);
+    });
+  }
+}
+
 /* ================== AI 분석 버튼 ================== */
 document.getElementById('btnCheck').addEventListener('click', async ()=>{
   const msg = document.getElementById('msg');
   const url = document.getElementById('inviteUrl').value.trim();
-  if(!url){ msg.textContent="❌ 청첩장 URL을 입력하세요."; msg.style.color="red"; return; }
+  if(!url){
+    msg.textContent="❌ 청첩장 URL을 입력하세요.";
+    msg.style.color="red";
+    return;
+  }
 
-  msg.textContent="⏳ AI로 분석 중입니다..."; msg.style.color="#333";
-
-  // AbortController로 타임아웃 (25초)
-  const controller = new AbortController();
-  const timer = setTimeout(()=>controller.abort(), 25000);
+  msg.textContent="⏳ AI로 분석 중입니다...";
+  msg.style.color="#333";
 
   try{
     const reqUrl = ENDPOINT + "?action=extract&url=" + encodeURIComponent(url);
-    const res = await fetch(reqUrl, { method:"GET", signal: controller.signal });
+    const data = await fetchJsonWithJsonpFallback(reqUrl);
 
-    if(!res.ok){
-      const txt = await res.text().catch(()=> "");
-      throw new Error(`요청 실패 (HTTP ${res.status}) ${txt ? "- " + txt.slice(0,120) : ""}`);
-    }
+    if(data && data.ok){
+      const payload = (data.data || {});
 
-    const data = await res.json().catch(()=> ({}));
-    const payload = (data && typeof data==='object' && 'data' in data) ? (data.data || {}) : (data || {});
-
-    if(data.ok){
-      // ====== 1) 폼 채우기 ======
+      // 1) 기본 텍스트 필드 채우기
       groomFather.value = payload.groomFather || "";
       groomMother.value = payload.groomMother || "";
       groomOrder.value  = payload.groomOrder  || "";
@@ -366,7 +389,7 @@ document.getElementById('btnCheck').addEventListener('click', async ()=>{
       brideOrder.value  = payload.brideOrder  || "";
       brideName.value   = payload.brideName   || "";
 
-      // 날짜/시간 정규화
+      // 2) 날짜/시간 정규화 (기존 유틸 사용)
       const dateRaw = payload.eventDate || payload.date || "";
       const timeRaw = payload.eventTime || payload.time || "";
       const dtFromTime = extractDateAndTimeKR(timeRaw);
@@ -376,259 +399,76 @@ document.getElementById('btnCheck').addEventListener('click', async ()=>{
       setDateDisplay(finalDate);
       setTimeDisplay(finalTime);
 
-      // 장소
+      // 3) 장소
       venueAddr.value   = payload.venueAddr || "";
-      venueDetail.value = payload.venue     || payload.venueDetail || "";
+      venueDetail.value = payload.venue     || "";
 
-      // ====== 2) Detail에서 사용할 제안값 저장 (연락처/계좌 전원) ======
-      const aiSuggestions = {
-        groomPhone:        payload.groomPhone        || "",
-        bridePhone:        payload.bridePhone        || "",
-        groomFatherPhone:  payload.groomFatherPhone  || "",
-        groomMotherPhone:  payload.groomMotherPhone  || "",
-        brideFatherPhone:  payload.brideFatherPhone  || "",
-        brideMotherPhone:  payload.brideMotherPhone  || "",
-        groomBank:         payload.groomBank         || "",
-        groomAccount:      payload.groomAccount      || "",
-        brideBank:         payload.brideBank         || "",
-        brideAccount:      payload.brideAccount      || "",
-        groomFatherBank:   payload.groomFatherBank   || "",
-        groomFatherAccount:payload.groomFatherAccount|| "",
-        groomMotherBank:   payload.groomMotherBank   || "",
-        groomMotherAccount:payload.groomMotherAccount|| "",
-        brideFatherBank:   payload.brideFatherBank   || "",
-        brideFatherAccount:payload.brideFatherAccount|| "",
-        brideMotherBank:   payload.brideMotherBank   || "",
-        brideMotherAccount:payload.brideMotherAccount|| ""
-      };
-      localStorage.setItem('ai_suggestions', JSON.stringify(aiSuggestions));
-
-      // ====== 3) 원문 payload 저장 (추적/디버그용) ======
+      // 4) Detail에서 쓰기 위한 원문 payload 보관
       localStorage.setItem('inviteExtractRaw', JSON.stringify(payload));
 
-      msg.textContent="✅ AI로 예식 정보가 입력되었습니다. 확인 바랍니다."; msg.style.color="green";
+      // 5) Wedding_Detail 자동 프리필용 제안값 저장
+      const aiSuggest = {
+        groomPhone: payload.groomPhone || "",
+        bridePhone: payload.bridePhone || "",
+        groomFatherPhone: payload.groomFatherPhone || "",
+        groomMotherPhone: payload.groomMotherPhone || "",
+        brideFatherPhone: payload.brideFatherPhone || "",
+        brideMotherPhone: payload.brideMotherPhone || "",
+        groomBank: payload.groomBank || "", groomAccount: payload.groomAccount || "",
+        brideBank: payload.brideBank || "", brideAccount: payload.brideAccount || "",
+        groomFatherBank: payload.groomFatherBank || "", groomFatherAccount: payload.groomFatherAccount || "",
+        groomMotherBank: payload.groomMotherBank || "", groomMotherAccount: payload.groomMotherAccount || "",
+        brideFatherBank: payload.brideFatherBank || "", brideFatherAccount: payload.brideFatherAccount || "",
+        brideMotherBank: payload.brideMotherBank || "", brideMotherAccount: payload.brideMotherAccount || ""
+      };
+      localStorage.setItem('ai_suggestions', JSON.stringify(aiSuggest));
+
+      msg.textContent="✅ AI로 예식 정보가 입력되었습니다. 확인 바랍니다.";
+      msg.style.color="green";
     }else{
-      throw new Error("분석 실패: " + (data && data.error ? data.error : "Unknown"));
+      throw new Error(data && data.error ? data.error : "Unknown");
     }
   }catch(err){
-    if (err.name === 'AbortError') {
-      msg.textContent = "❌ 네트워크 지연 혹은 타임아웃(25초). 다시 시도해주세요.";
-    } else if (/access-control-allow-origin|cors/i.test(String(err))) {
-      msg.textContent = "❌ CORS 문제로 호출 실패. (GAS 웹앱 배포 권한/코드 CORS 헤더 확인)";
-    } else {
-      msg.textContent = "❌ 분석 실패: " + err.message;
-    }
+    msg.textContent = "❌ 분석 실패: " + err.message;
     msg.style.color="red";
-  }finally{
-    clearTimeout(timer);
   }
 });
 
-/* ================== 모달 열고/닫기 ================== */
-const backdrop = document.getElementById('pickerBackdrop');
-const datePicker = document.getElementById('datePicker');
-const timePicker = document.getElementById('timePicker');
-const dateDisplay = document.getElementById('eventDateDisplay');
-const timeDisplay = document.getElementById('eventTimeDisplay');
-const dateHidden = document.getElementById('eventDate');
-const timeHidden = document.getElementById('eventTime');
-function openPicker(el){ backdrop.style.display='block'; el.style.display='block'; }
-function closePicker(){ backdrop.style.display='none'; datePicker.style.display='none'; timePicker.style.display='none'; }
-backdrop.addEventListener('click', closePicker);
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closePicker(); });
-
-/* ================== 달력 렌더 ================== */
-const calGrid = document.getElementById('calGrid');
-const calYear = document.getElementById('calYear');
-const calMonth = document.getElementById('calMonth');
-const tempDate = document.getElementById('tempDate');
-const dateYM = document.getElementById('dateYM');
-const dateSelectedText = document.getElementById('dateSelectedText');
-
-const pad = n => String(n).padStart(2,'0');
-const toIso = (y,m,d) => `${y}-${pad(m)}-${pad(d)}`;
-const pretty = iso => (iso ? iso.split('-').join('.') : '');
-
-function weekdayK(y,m,d){
-  const days = ['일','월','화','수','목','금','토'];
-  return days[new Date(y, m-1, d).getDay()];
-}
-function setWeekendClass(el, dow){
-  if(dow === 0) el.classList.add('sun');
-  if(dow === 6) el.classList.add('sat');
-}
-function renderCal(y, m, selectedIso){
-  calYear.value=y; calMonth.value=m;
-  dateYM.textContent = `${y}.${pad(m)}`;
-  calGrid.innerHTML='';
-
-  const first = new Date(y, m-1, 1);
-  const startDow = first.getDay();
-  const daysInMonth = new Date(y, m, 0).getDate();
-
-  const today = new Date();
-  const todayIso = toIso(today.getFullYear(), today.getMonth()+1, today.getDate());
-
-  for(let i=0;i<startDow;i++){
-    const d = new Date(y, m-1, 1 - (startDow - i));
-    const div = document.createElement('div');
-    div.className='cal-day out';
-    div.textContent = String(d.getDate());
-    setWeekendClass(div, d.getDay());
-    calGrid.appendChild(div);
+/* ================== 다음 단계 버튼 ================== */
+document.getElementById('btnNext').addEventListener('click', ()=>{
+  for(const field of requiredFields){
+    const el=document.getElementById(field.id);
+    if(!el || !String(el.value).trim()){
+      alert("❌ 필수 입력값이 누락되었습니다: " + field.label);
+      return;
+    }
   }
-
-  for(let d=1; d<=daysInMonth; d++){
-    const iso = toIso(y, m, d);
-    const dow = new Date(y, m-1, d).getDay();
-    const btn = document.createElement('button');
-    btn.type='button'; btn.className='cal-day'; btn.textContent=String(d);
-
-    setWeekendClass(btn, dow);
-    if(iso===todayIso) btn.classList.add('today');
-    if(selectedIso && iso===selectedIso) btn.classList.add('sel');
-
-    btn.addEventListener('click', ()=>{
-      tempDate.value = iso;
-      [...calGrid.querySelectorAll('.cal-day')].forEach(b=>b.classList.remove('sel'));
-      btn.classList.add('sel');
-      dateSelectedText.textContent = `선택된 날짜: ${pretty(iso)}(${weekdayK(y,m,d)})`;
-    });
-
-    calGrid.appendChild(btn);
-  }
-}
-document.getElementById('prevMonth').addEventListener('click', ()=>{
-  let y=Number(calYear.value), m=Number(calMonth.value)-1; if(m<1){m=12;y--;}
-  renderCal(y,m,tempDate.value||dateHidden.value||'');
-});
-document.getElementById('nextMonth').addEventListener('click', ()=>{
-  let y=Number(calYear.value), m=Number(calMonth.value)+1; if(m>12){m=1;y++;}
-  renderCal(y,m,tempDate.value||dateHidden.value||'');
-});
-document.getElementById('dateCancel').addEventListener('click', closePicker);
-document.getElementById('dateConfirm').addEventListener('click', ()=>{
-  const iso = tempDate.value;
-  if(iso){
-    const [yy,mm,dd] = iso.split('-').map(n=>+n);
-    dateHidden.value = iso;
-    dateDisplay.value = pretty(iso);
-    dateDisplay.removeAttribute('aria-invalid');
-    dateSelectedText.textContent = `선택된 날짜: ${pretty(iso)}(${weekdayK(yy,mm,dd)})`;
-  }else{
-    dateDisplay.setAttribute('aria-invalid','true');
-  }
-  closePicker();
-});
-function setDateDisplay(iso){
-  dateHidden.value = iso || '';
-  if(iso){
-    const [yy,mm,dd] = iso.split('-').map(n=>+n);
-    dateDisplay.value = pretty(iso);
-    dateSelectedText.textContent = `선택된 날짜: ${pretty(iso)}(${weekdayK(yy,mm,dd)})`;
-  }else{
-    dateDisplay.value = '';
-    dateSelectedText.textContent = '';
-  }
-}
-dateDisplay.addEventListener('click', ()=>{
-  openPicker(datePicker);
-  const base = dateHidden.value ? new Date(dateHidden.value) : new Date();
-  tempDate.value = dateHidden.value || '';
-  if(tempDate.value){
-    const [yy,mm,dd] = tempDate.value.split('-').map(n=>+n);
-    dateSelectedText.textContent = `선택된 날짜: ${pretty(tempDate.value)}(${weekdayK(yy,mm,dd)})`;
-  }else{
-    dateSelectedText.textContent = '';
-  }
-  renderCal(base.getFullYear(), base.getMonth()+1, tempDate.value);
+  const info={
+    inviteUrl:document.getElementById('inviteUrl').value,
+    noInvite:document.getElementById('noInvite').checked,
+    groomFather:document.getElementById('groomFather').value,
+    groomMother:document.getElementById('groomMother').value,
+    groomOrder:document.getElementById('groomOrder').value,
+    groomName:document.getElementById('groomName').value,
+    brideFather:document.getElementById('brideFather').value,
+    brideMother:document.getElementById('brideMother').value,
+    brideOrder:document.getElementById('brideOrder').value,
+    brideName:document.getElementById('brideName').value,
+    eventDate:document.getElementById('eventDate').value,  // YYYY-MM-DD
+    eventTime:document.getElementById('eventTime').value,  // HH:MM (24h)
+    venueAddr:document.getElementById('venueAddr').value,
+    venueDetail:document.getElementById('venueDetail').value,
+    isSmallWedding:document.getElementById('isSmallWeddingInput').value,
+    flower:document.getElementById('flowerInput').value
+  };
+  const raw = localStorage.getItem('inviteExtractRaw') || '';
+  if(raw) info._extract = JSON.parse(raw);
+  localStorage.setItem('inviteInfo', JSON.stringify(info));
+  location.href='wedding_detail.html';
 });
 
-/* ================== 시간 피커(세로 3열) ================== */
-const ampmCol = document.getElementById('ampmCol');
-const hourCol = document.getElementById('hourCol');
-const minCol  = document.getElementById('minCol');
-const tempHour = document.getElementById('tempHour');
-const tempMin  = document.getElementById('tempMin');
-let tempAmpm = '오전';
-
-function to12h(h24){
-  const n = parseInt(h24,10);
-  if(isNaN(n)) return {ampm:'오전', h:'12'};
-  if(n===0) return {ampm:'오전', h:'12'};
-  if(n===12) return {ampm:'오후', h:'12'};
-  if(n>12) return {ampm:'오후', h:String(n-12).padStart(2,'0')};
-  return {ampm:'오전', h:String(n).padStart(2,'0')};
-}
-function to24h(ampm, h12){
-  let n = parseInt(h12,10) || 0;
-  if(ampm==='오전'){ if(n===12) n=0; }
-  else{ if(n<12) n+=12; }
-  return String(n).padStart(2,'0');
-}
-function renderTimeCols(selAmpm='오전', selH='12', selM='00'){
-  ampmCol.innerHTML='';
-  ['오전','오후'].forEach(v=>{
-    const b=document.createElement('button'); b.type='button'; b.className='time-item'; b.textContent=v; b.dataset.v=v;
-    if(v===selAmpm) b.classList.add('sel');
-    b.addEventListener('click', ()=>{
-      tempAmpm=v; ampmCol.querySelectorAll('.time-item').forEach(x=>x.classList.remove('sel')); b.classList.add('sel');
-    });
-    ampmCol.appendChild(b);
-  });
-
-  hourCol.innerHTML='';
-  for(let h=1; h<=12; h++){
-    const v=String(h).padStart(2,'0');
-    const b=document.createElement('button'); b.type='button'; b.className='time-item'; b.textContent=v; b.dataset.v=v;
-    if(v===selH) b.classList.add('sel');
-    b.addEventListener('click', ()=>{
-      tempHour.value=v; hourCol.querySelectorAll('.time-item').forEach(x=>x.classList.remove('sel')); b.classList.add('sel');
-      b.scrollIntoView({block:'center', behavior:'smooth'});
-    });
-    hourCol.appendChild(b);
-    if(v===selH) queueMicrotask(()=>b.scrollIntoView({block:'center'}));
-  }
-
-  minCol.innerHTML='';
-  ['00','10','20','30','40','50'].forEach(v=>{
-    const b=document.createElement('button'); b.type='button'; b.className='time-item'; b.textContent=v; b.dataset.v=v;
-    if(v===selM) b.classList.add('sel');
-    b.addEventListener('click', ()=>{
-      tempMin.value=v; minCol.querySelectorAll('.time-item').forEach(x=>x.classList.remove('sel')); b.classList.add('sel');
-      b.scrollIntoView({block:'center', behavior:'smooth'});
-    });
-    minCol.appendChild(b);
-    if(v===selM) queueMicrotask(()=>b.scrollIntoView({block:'center'}));
-  });
-}
-timeDisplay.addEventListener('click', ()=>{
-  openPicker(timePicker);
-  const v = timeHidden.value;
-  let h='12', m='00'; tempAmpm='오전';
-  if(/^\d{2}:\d{2}$/.test(v)){
-    const [hh,mm] = v.split(':'); const t=to12h(hh);
-    tempAmpm=t.ampm; h=t.h; m=mm;
-  }
-  tempHour.value=h; tempMin.value=m;
-  renderTimeCols(tempAmpm, h, m);
-});
-document.getElementById('timeCancel').addEventListener('click', closePicker);
-document.getElementById('timeConfirm').addEventListener('click', ()=>{
-  const h12=tempHour.value, m=tempMin.value;
-  if(h12 && m){
-    const hh = to24h(tempAmpm, h12);
-    const val = `${hh}:${m}`;
-    timeHidden.value = val;
-    timeDisplay.value = `${tempAmpm} ${h12}:${m}`;
-    timeDisplay.removeAttribute('aria-invalid');
-  }else{
-    timeDisplay.setAttribute('aria-invalid','true');
-  }
-  closePicker();
-});
-
-/* ================== 시간/날짜 파서 ================== */
+/* ================== (기존 유지) 시간/날짜 파서 유틸 ================== */
+/** 아래 두 유틸은 기존 Wedding.html에 이미 있는 버전 그대로 사용하세요 */
 function normalizeToHHMM(raw){
   if(!raw) return '';
   let s = String(raw).trim()
@@ -637,7 +477,6 @@ function normalizeToHHMM(raw){
     .replace(/분/g,'')
     .replace(/\.00\b/g,':00');
 
-  // 1300 -> 13:00
   if(/^\d{3,4}$/.test(s) && !s.includes(':')){
     const mm = s.slice(-2), hh = s.slice(0, s.length-2);
     s = `${hh}:${mm}`;
@@ -692,7 +531,36 @@ function extractDateAndTimeKR(raw){
   }
   return out;
 }
+
+/* ================== (기존 유지) 날짜/시간 표시 업데이트 ================== */
+/** 아래 두 함수도 네 기존 Wedding.html에 이미 있으니 그대로 두고 사용 */
+function setDateDisplay(iso){
+  const dateHidden = document.getElementById('eventDate');
+  const dateDisplay = document.getElementById('eventDateDisplay');
+  const dateSelectedText = document.getElementById('dateSelectedText');
+  const weekdayK = (y,m,d)=>['일','월','화','수','목','금','토'][new Date(y, m-1, d).getDay()];
+  const pretty = (x)=> (x ? x.split('-').join('.') : '');
+  dateHidden.value = iso || '';
+  if(iso){
+    const [yy,mm,dd] = iso.split('-').map(n=>+n);
+    dateDisplay.value = pretty(iso);
+    if(dateSelectedText) dateSelectedText.textContent = `선택된 날짜: ${pretty(iso)}(${weekdayK(yy,mm,dd)})`;
+  }else{
+    dateDisplay.value = '';
+    if(dateSelectedText) dateSelectedText.textContent = '';
+  }
+}
 function setTimeDisplay(v){
+  const timeHidden = document.getElementById('eventTime');
+  const timeDisplay = document.getElementById('eventTimeDisplay');
+  function to12h(h24){
+    const n = parseInt(h24,10);
+    if(isNaN(n)) return {ampm:'오전', h:'12'};
+    if(n===0) return {ampm:'오전', h:'12'};
+    if(n===12) return {ampm:'오후', h:'12'};
+    if(n>12) return {ampm:'오후', h:String(n-12).padStart(2,'0')};
+    return {ampm:'오전', h:String(n).padStart(2,'0')};
+  }
   const norm = normalizeToHHMM(v);
   if(norm){
     timeHidden.value = norm;
@@ -703,110 +571,6 @@ function setTimeDisplay(v){
     timeHidden.value = ''; timeDisplay.value = '';
   }
 }
-
-/* ================== 커스텀 셀렉트 증강 ================== */
-function enhanceSelect(selectEl){
-  const wrap = document.querySelector(`.cselect[data-for="${selectEl.id}"]`);
-  if(!wrap) return;
-  const btn = wrap.querySelector('.cselect__btn');
-  const list = wrap.querySelector('.cselect__list');
-  if(!btn.firstChild) btn.appendChild(document.createTextNode('선택'));
-
-  function render(){
-    list.innerHTML = '';
-    [...selectEl.options].forEach(opt=>{
-      const div=document.createElement('div');
-      div.className='cselect__option'; div.setAttribute('role','option');
-      div.dataset.value = opt.value; div.textContent = opt.textContent;
-      div.setAttribute('aria-selected', String(opt.selected));
-      div.addEventListener('click', ()=>{
-        selectEl.value = opt.value;
-        btn.firstChild.nodeValue = opt.textContent || '선택';
-        [...list.children].forEach(n=>n.setAttribute('aria-selected','false'));
-        div.setAttribute('aria-selected','true');
-        list.classList.remove('is-open'); btn.setAttribute('aria-expanded','false');
-        selectEl.dispatchEvent(new Event('change'));
-      });
-      list.appendChild(div);
-    });
-    const selOpt = selectEl.selectedOptions[0];
-    btn.firstChild.nodeValue = selOpt ? selOpt.textContent : '선택';
-  }
-
-  render();
-  btn.addEventListener('click', ()=>{
-    const open = list.classList.toggle('is-open');
-    btn.setAttribute('aria-expanded', String(open));
-  });
-  document.addEventListener('click', (e)=>{
-    if(!wrap.contains(e.target)){
-      list.classList.remove('is-open'); btn.setAttribute('aria-expanded','false');
-    }
-  });
-  btn.addEventListener('keydown', (e)=>{
-    if(e.key==='Escape'){ list.classList.remove('is-open'); btn.setAttribute('aria-expanded','false'); }
-  });
-  selectEl.addEventListener('change', render);
-}
-document.querySelectorAll('select[data-ui="custom-select"]').forEach(enhanceSelect);
-
-/* ================== 세그먼트 토글 ================== */
-document.addEventListener('click', (e)=>{
-  const btn = e.target.closest('.seg__btn'); if(!btn) return;
-  const seg = btn.closest('.seg'); const hiddenId = seg?.getAttribute('data-for');
-  const hidden = hiddenId ? document.getElementById(hiddenId) : null;
-  if(!seg) return;
-  seg.querySelectorAll('.seg__btn').forEach(b=>{ b.setAttribute('aria-pressed','false'); b.classList.remove('is-selected'); });
-  btn.setAttribute('aria-pressed','true'); btn.classList.add('is-selected');
-  if(hidden) hidden.value = btn.dataset.value || '';
-});
-
-/* ================== 수기 입력 모드 전환 ================== */
-const noInviteEl = document.getElementById('noInvite');
-const inviteUrlBlock = document.getElementById('inviteUrlBlock');
-const btnCheck = document.getElementById('btnCheck');
-function updateInviteMode(){
-  const off = noInviteEl.checked;
-  inviteUrlBlock.classList.toggle('hidden', off);
-  btnCheck.classList.toggle('hidden', off);
-  if(off){ document.getElementById('inviteUrl').value=''; }
-}
-noInviteEl.addEventListener('change', updateInviteMode);
-updateInviteMode();
-
-/* ================== 다음 단계 버튼 ================== */
-document.getElementById('btnNext').addEventListener('click', ()=>{
-  for(const field of requiredFields){
-    const el=document.getElementById(field.id);
-    if(!el || !String(el.value).trim()){
-      alert("❌ 필수 입력값이 누락되었습니다: " + field.label);
-      return;
-    }
-  }
-  const info={
-    inviteUrl:document.getElementById('inviteUrl').value,
-    noInvite:document.getElementById('noInvite').checked,
-    groomFather:document.getElementById('groomFather').value,
-    groomMother:document.getElementById('groomMother').value,
-    groomOrder:document.getElementById('groomOrder').value,
-    groomName:document.getElementById('groomName').value,
-    brideFather:document.getElementById('brideFather').value,
-    brideMother:document.getElementById('brideMother').value,
-    brideOrder:document.getElementById('brideOrder').value,
-    brideName:document.getElementById('brideName').value,
-    eventDate:document.getElementById('eventDate').value,  // YYYY-MM-DD
-    eventTime:document.getElementById('eventTime').value,  // HH:MM (24h)
-    venueAddr:document.getElementById('venueAddr').value,
-    venueDetail:document.getElementById('venueDetail').value,
-    isSmallWedding:document.getElementById('isSmallWeddingInput').value,
-    flower:document.getElementById('flowerInput').value
-  };
-  // 원문 추출(전화/계좌 포함) 같이 넘겨 detail에서 활용
-  const raw = localStorage.getItem('inviteExtractRaw') || '';
-  if(raw) info._extract = JSON.parse(raw);
-  localStorage.setItem('inviteInfo', JSON.stringify(info));
-  location.href='wedding_detail.html';
-});
 </script>
 
 <!-- Daum Postcode API -->
