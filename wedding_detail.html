@@ -41,6 +41,7 @@
     dialog .dlg-foot{padding:12px 16px;display:flex;gap:8px;justify-content:flex-end}
 
     .footer{display:flex;justify-content:center;gap:8px;margin-top:12px}
+    .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 14px;border-radius:8px;display:none}
   </style>
 </head>
 <body>
@@ -80,11 +81,11 @@
       <div class="row">
         <div class="col">
           <label id="lbl-dept">근무 부서<span class="req">*</span></label>
-          <input type="text" id="dept" placeholder="예) MX기획팀" autocomplete="organization" />
+          <input type="text" id="dept" placeholder="예) 스마트폰개발1그룹(MX)" autocomplete="organization" />
         </div>
         <div class="col">
           <label id="lbl-title">직책<span class="req">*</span></label>
-          <input type="text" id="title" placeholder="예) 부장" autocomplete="organization-title" />
+          <input type="text" id="title" placeholder="예) 상무" autocomplete="organization-title" />
         </div>
       </div>
     </section>
@@ -123,6 +124,7 @@
             <option value="">은행 선택</option>
             <option>국민</option><option>신한</option><option>우리</option>
             <option>하나</option><option>농협</option><option>기업</option>
+            <option>새마을금고</option><option>대구</option><option>부산</option>
             <option value="__custom__">직접입력</option>
           </select>
           <input class="hidden" id="bankInput" type="text" placeholder="은행명 입력" />
@@ -166,7 +168,10 @@
   <dialog id="dlg">
     <div class="dlg-head">게시글 미리보기</div>
     <div class="dlg-body">
-      <pre id="previewText" style="white-space:pre-wrap;font-size:14px;line-height:1.4"></pre>
+      <div style="font-size:14px;line-height:1.4;margin-bottom:8px"><b>제목</b></div>
+      <pre id="previewSubject" style="white-space:pre-wrap;font-size:14px;line-height:1.4;margin:0 0 12px 0;background:#f7f7f7;padding:8px;border-radius:8px"></pre>
+      <div style="font-size:14px;line-height:1.4;margin-bottom:8px"><b>본문</b></div>
+      <pre id="previewBody" style="white-space:pre-wrap;font-size:14px;line-height:1.5;margin:0;background:#f7f7f7;padding:8px;border-radius:8px"></pre>
     </div>
     <div class="dlg-foot">
       <button class="btn ghost" id="dlg-cancel">닫기</button>
@@ -174,7 +179,13 @@
     </div>
   </dialog>
 
+  <div class="toast" id="toast"></div>
+
   <script>
+    /* ===== 환경설정 ===== */
+    // ✅ GAS 웹앱 엔드포인트 (CORS 허용, Code.gs의 doPost/doGet와 연계)
+    const ENDPOINT = "https://script.google.com/macros/s/AKfycb_YOUR_SCRIPT_ID/exec";
+
     /* ===== 이전 페이지 저장값 로드 (inviteInfo) ===== */
     const KEYMAP = {
       groom: ['groomName','groom','groom_name'],
@@ -185,6 +196,7 @@
       brideMother: ['brideMother','bride_mother','brideMotherName']
     };
     const pick = (obj, keys) => { for (const k of keys) if (obj && obj[k]) return String(obj[k]); return ''; };
+
     function readPrev() {
       let base = {};
       try {
@@ -197,13 +209,28 @@
         if (v) flat[k] = v;
       });
       const src = { ...base, ...flat };
+
+      // __extract 및 ai_suggestions
+      let extract = {};
+      try { extract = JSON.parse(localStorage.getItem('inviteExtractRaw') || '{}'); } catch {}
+      let ai = {};
+      try { ai = JSON.parse(localStorage.getItem('ai_suggestions') || '{}'); } catch {}
+
       return {
+        src,
+        extract,
+        ai,
         groom:       pick(src, KEYMAP.groom),
         bride:       pick(src, KEYMAP.bride),
         groomFather: pick(src, KEYMAP.groomFather),
         groomMother: pick(src, KEYMAP.groomMother),
         brideFather: pick(src, KEYMAP.brideFather),
         brideMother: pick(src, KEYMAP.brideMother),
+        eventDate:   src.eventDate || '', // YYYY-MM-DD
+        eventTime:   src.eventTime || '', // HH:MM(24h)
+        venueAddr:   src.venueAddr || '',
+        venueDetail: src.venueDetail || '',
+        venueTel:    (extract.venueTel || '')
       };
     }
     const WF = readPrev();
@@ -223,6 +250,7 @@
     const enableSubmit=()=>el('btn-submit').removeAttribute('disabled');
     const disableSubmit=()=>el('btn-submit').setAttribute('disabled','');
     const press=(btn,on)=>{btn.setAttribute('aria-pressed',String(!!on)); if(on){btn.classList.add('is-selected');}else{btn.classList.remove('is-selected');}};
+    const toast=(msg)=>{const t=el('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',2000);}
 
     const secPerson=el('sec-person'),secStatus=el('sec-status'),secOnjob=el('sec-onjob'),
           secRetire=el('sec-retire'),secAct=el('sec-act'),secAccount=el('sec-account'),
@@ -230,12 +258,27 @@
 
     function roleLabel(role, name) { return name ? `${role} · ${name}` : `${role} · 성함 없음`; }
 
-    /* ====== 🔹 AI 제안 로드 & 자동 프리필 유틸 (UI 변경 없음) ====== */
-    let AI = {};
-    try { AI = JSON.parse(localStorage.getItem('ai_suggestions') || '{}'); } catch { AI = {}; }
+    /* ===== GAS 전송 ===== */
+    async function sendAnnouncement(subject, body) {
+      const payload = { action: "sendAnnouncement", subject, body };
+      const res = await fetch(ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify(payload)
+      });
+      if(!res.ok){
+        const txt = await res.text().catch(()=> "");
+        throw new Error(`메일 전송 실패(HTTP ${res.status}) ${txt?'- '+txt.slice(0,200):''}`);
+      }
+      const j = await res.json().catch(()=> ({}));
+      if(!j.ok) throw new Error(j.error || "메일 전송 실패");
+      return j;
+    }
 
+    /* ====== 🔹 AI 제안 로드 & 자동 프리필 ====== */
     // 측/인물 조합 → (bank, account, phone) 제안값 선택
     function pickSuggestion(side, person) {
+      const AI = WF.ai || {};
       const map = {
         groom: {
           father: { bank: AI.groomFatherBank, account: AI.groomFatherAccount, phone: AI.groomFatherPhone },
@@ -307,7 +350,7 @@
       }
       show(secPerson);
 
-      // 🔹 추가: 측만 선택해도 '본인' 기준으로 우선 프리필
+      // 측만 선택해도 '본인' 기준 우선 프리필
       applySuggestionToInputs(pickSuggestion(state.side, 'self'));
     }
     el('btn-groom-side').addEventListener('click',()=>selectSide('groom'));
@@ -321,7 +364,6 @@
       press(el('btn-self'),  p==='self');
       show(secStatus);
 
-      // 🔹 추가: 측+인물 조합에 맞춰 자동 프리필
       applySuggestionToInputs(pickSuggestion(state.side, state.person));
     }
     el('btn-father').addEventListener('click',()=>selectPerson('father'));
@@ -437,45 +479,123 @@
       enable(el('btn-preview')); enableSubmit();
     }
 
+    /* ===== 날짜/요일/포맷 유틸 ===== */
+    function parseISO(d){ if(!d) return null; const [y,m,dd]=d.split('-').map(n=>+n); return new Date(y,(m-1),dd); }
+    function weekdayChJp(date){
+      const map = ['日','月','火','水','木','金','土']; // 예시 제목처럼 土 사용
+      return map[date.getDay()];
+    }
+    function mdLabel(date){ return `${date.getMonth()+1}.${date.getDate()}`; }
+
+    /* ===== 규칙 기반 문안 생성 ===== */
+    function buildTitleAndBody(){
+      const d = parseISO(WF.eventDate);
+      const w = d ? weekdayChJp(d) : '';
+      const md = d ? mdLabel(d) : '';
+
+      // 1) 재직/퇴임 라벨
+      const corp = (state.status==='재직') ? '삼성전자' : '전)삼성전자';
+
+      // 선택된 사람(표기 이름)
+      const nameSet = (state.side==='groom')
+        ? { father:WF.groomFather, mother:WF.groomMother, self:WF.groom }
+        : { father:WF.brideFather, mother:WF.brideMother, self:WF.bride };
+      const subjectName = nameSet[state.person] || '';
+
+      // 2) 장남/장녀 등 문구(상부 노출)
+      //   - 신랑측: "아들" 기준: 장남/차남/…
+      //   - 신부측: "딸"  기준: 장녀/차녀/…
+      const upperLine = (() => {
+        const gLine = `${WF.groomFather || ''} · ${WF.groomMother || ''} 의 ${WF.groomOrder || ''} ${WF.groom || ''}`.trim();
+        const bLine = `${WF.brideFather || ''} · ${WF.brideMother || ''} 의 ${WF.brideOrder || ''} ${WF.bride || ''}`.trim();
+        if(state.side==='groom'){
+          // 임원 가족 정보 상부 노출: 여기서는 선택측을 1행에, 상대측을 2행에
+          return `${gLine}\n${bLine}`;
+        }else{
+          return `${bLine}\n${gLine}`;
+        }
+      })();
+
+      // 3) 식장 정보: 상부 식장명/홀, 하단 주소/전화
+      const venueNameHall = WF.venueDetail || ''; // 호텔명/홀명 등
+      const venueLower = `${WF.venueAddr || ''}${WF.venueTel ? `\n                (TEL : ${WF.venueTel})` : ''}`;
+
+      // 연락처 표기: "(이름 직책)" 형태
+      const contactTail = state.title ? ` (${subjectName} ${state.title})` : ` (${subjectName})`;
+
+      // 축의계좌 표기: "(예금주 이름)" → 선택자 기준
+      const acctTail = ` (${subjectName})`;
+
+      // 4) 청탁금지법 라인
+      const actLine = (state.act==='대상') ? '※ 청탁금지법 대상' : '※ 청탁금지법 비대상';
+
+      // ===== 제목 & 본문 조립 =====
+      const subject = `＜화혼＞ ${corp} ${state.dept || ''} ${subjectName} ${state.title || ''} ${ (state.side==='groom') ? (WF.groomOrder||'')+'결혼' : (WF.brideOrder||'')+'결혼' }(${md} ${w})`.replace(/\s+/g,' ').trim();
+
+      const bodyLines = [];
+      bodyLines.push(`${corp} ${state.dept || ''} ${subjectName} ${state.title || ''} ${(state.side==='groom')?'장남결혼':'장녀결혼'}을 안내하오니 많은 축하 부탁드립니다.`);
+      bodyLines.push('');
+      bodyLines.push(upperLine);
+      bodyLines.push('');
+      bodyLines.push(`□ 일   시 : ${WF.eventDate ? WF.eventDate.replace(/-/g,'년 ').replace(/-(\d{2})$/,'월 $1일') : ''} ${WF.eventTime ? formatKoreanTime(WF.eventTime) : ''}`);
+      bodyLines.push(`□ 장   소 : ${venueNameHall}`);
+      bodyLines.push(`                ${venueLower}`);
+      bodyLines.push(`□ 연락처 : ${state.phone}${contactTail}`);
+      bodyLines.push(`□ 축의금 전달계좌 : ${state.bank} ${state.account}${acctTail}`);
+      bodyLines.push(actLine);
+
+      return { subject, body: bodyLines.join('\n') };
+    }
+
+    function formatKoreanTime(hhmm){
+      // HH:MM(24h) → "오전/오후 H:MM"
+      const [h,m] = hhmm.split(':').map(n=>+n);
+      const am = (h<12);
+      const h12 = (h%12)||12;
+      return `${am?'오전':'오후'} ${String(h12)}:${String(m).padStart(2,'0')}`;
+    }
+
     /* ===== 미리보기/제출 ===== */
     function buildPreview(){
-      const sideKo=state.side==='groom'?'신랑측':'신부측';
-      const nameSet=state.side==='groom'
-        ? {father:WF.groomFather,mother:WF.groomMother,self:WF.groom}
-        : {father:WF.brideFather,mother:WF.brideMother,self:WF.bride};
-      const whoName=state.person==='father'?'아버지':(state.person==='mother'?'어머니':'본인');
-      const subjectName=nameSet[state.person]||'(성함 미입력)';
-      const lines=[];
-      lines.push(`[${sideKo}] ${whoName}: ${subjectName}`);
-      lines.push(`삼성전자 재직여부: ${state.status}`);
-      lines.push(`부서/직책(재직시): ${state.dept||'-'} / ${state.title||'-'}`);
-      if(state.status==='퇴임'){lines.push(`현직장/직책: ${state.curCombined||'-'}`);}
-      lines.push(`청탁금지법: ${state.act||'미선택'}`);
-      if(state.act==='대상'){lines.push(`대상 구분: ${state.who}`);}
-      if(state.who==='배우자'){lines.push(`배우자 직장/직책: ${state.spouseCombined||'-'}`);}
-      lines.push(`축의계좌: ${state.bank} ${state.account}`);
-      lines.push(`연락처(본인): ${state.phone}`);
-      lines.push(`계좌공개: ${state.open}`);
-      return lines.join('\n');
+      const {subject, body} = buildTitleAndBody();
+      return {subject, body};
     }
 
     el('btn-preview').addEventListener('click',()=>{
       if(el('btn-preview').hasAttribute('aria-disabled')) return;
-      el('previewText').textContent=buildPreview();
+      const p = buildPreview();
+      el('previewSubject').textContent = p.subject;
+      el('previewBody').textContent = p.body;
       el('dlg').showModal();
     });
     el('dlg-cancel').addEventListener('click',()=>el('dlg').close());
-    el('dlg-ok').addEventListener('click',()=>{ el('dlg').close(); submit(); });
+    el('dlg-ok').addEventListener('click', async ()=>{
+      try{
+        const p = buildPreview();
+        const r = await sendAnnouncement(p.subject, p.body);
+        el('dlg').close();
+        toast('메일로 전송되었습니다.');
+      }catch(e){
+        toast(e.message || '전송 실패');
+      }
+    });
 
-    function submit(){
+    function submitLocal(){
       localStorage.setItem('weddingDetail', JSON.stringify(state));
-      alert('제출되었습니다. (임시 저장: localStorage.weddingDetail)');
+      toast('임시 저장되었습니다.');
     }
     document.getElementById('btn-submit').addEventListener('click',()=>{
-      if(!el('btn-submit').hasAttribute('disabled')) submit();
+      if(!el('btn-submit').hasAttribute('disabled')) submitLocal();
     });
 
     // 초기 검증
+    // 페이지 진입 시, WF 값 일부 힌트
+    (function initHints(){
+      if(!WF.eventDate || !WF.venueDetail){
+        console.warn('inviteInfo 일부 값이 비어있습니다.', WF);
+      }
+    })();
+
     validate();
   </script>
 </body>
