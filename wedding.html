@@ -65,7 +65,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 .cselect__option[aria-selected="true"]{ background:#111; color:#fff; }
 .cselect__option:hover{ background:#f2f2f2; }
 
-/* ================== 세그먼트 버튼 ================== */
 .seg{ display:flex; gap:6px; }
 .seg__btn{
   flex:1; padding:10px 12px; border:1.5px solid #ddd; border-radius:6px;
@@ -100,12 +99,10 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 .picker__btn.primary{ background:#111; color:#fff; border-color:#111; }
 .icon-btn{ border:1.5px solid #ddd; background:#fff; border-radius:8px; width:36px; height:32px; cursor:pointer; }
 
-/* ================== 달력 헤더 라인 ================== */
 .cal-topline{ display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px; }
 .cal-left{ font-weight:800; font-size:14px; color:#111; }
 .cal-ym{ font-weight:800; font-size:18px; letter-spacing:.3px; }
 
-/* ================== 달력 요일/날짜 그리드 ================== */
 .cal-head{
   display:grid; grid-template-columns:repeat(7,1fr); gap:4px;
   margin-bottom:6px; font-size:14px; font-weight:700; text-align:center;
@@ -114,8 +111,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 .cal-head .sat{ color:#142396; }
 
 .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
-
-/* 날짜 셀 */
 .cal-day{
   padding:10px 0; text-align:center; border-radius:8px; border:1px solid transparent;
   cursor:pointer; background:#fff; color:#111; font-weight:600;
@@ -123,13 +118,10 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 .cal-day:hover{ background:#f5f5f5; }
 .cal-day.out{ color:#bbb; cursor:default; background:transparent; }
 .cal-day.today{ border-color:#111; }
-
-/* 선택 상태 */
 .cal-day.sel{ background:#111; color:#fff !important; }
 .cal-day.sun{ color:#C82D2D !important; }
 .cal-day.sat{ color:#142396 !important; }
 
-/* ================== 시간 피커: 3열 세로 ================== */
 .time-wrap{ display:flex; gap:8px; }
 .time-col{
   flex:1; max-height:260px; overflow-y:auto; overflow-x:hidden;
@@ -146,10 +138,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 .time-item:hover{ background:#f5f5f5; }
 .time-item.sel{ background:#111; color:#fff; border-color:#111; }
 
-/* 보조 안내문 */
 .hint { color:#8a8a8a; font-size:12px; margin-top:6px; display:block; }
-
-/* a11y */
 .sr-only{
   position:absolute !important; width:1px; height:1px; padding:0; margin:-1px;
   overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
@@ -323,21 +312,22 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 
 <script>
 /* ================== 설정/상수 ================== */
-const ENDPOINT = "https://script.google.com/macros/s/AKfycbwsBf2tcQ_17Fpu_yDcEcn4uQDnZ0T8bU5L9KJtkgCCvXOsn5IfKEwVTP5_o7-fQmbvww/exec";
+/** GAS 웹앱 배포 URL (doGet: ?action=extract&url=...) */
+const ENDPOINT = "https://script.google.com/macros/s/AKfycb_YOUR_SCRIPT_ID/exec";
 
-/* 필수 입력 항목 목록 */
+/** 필수 입력 항목 */
 const requiredFields = [
   {id:"groomFather", label:"신랑 아버지 성함"},
   {id:"groomMother", label:"신랑 어머니 성함"},
-  {id:"groomOrder", label:"신랑 형제관계"},
-  {id:"groomName", label:"신랑 성명"},
+  {id:"groomOrder",  label:"신랑 형제관계"},
+  {id:"groomName",   label:"신랑 성명"},
   {id:"brideFather", label:"신부 아버지 성함"},
   {id:"brideMother", label:"신부 어머니 성함"},
-  {id:"brideOrder", label:"신부 형제관계"},
-  {id:"brideName", label:"신부 성명"},
-  {id:"eventDate", label:"예식 날짜"},
-  {id:"eventTime", label:"예식 시간"},
-  {id:"venueAddr", label:"예식장 주소"},
+  {id:"brideOrder",  label:"신부 형제관계"},
+  {id:"brideName",   label:"신부 성명"},
+  {id:"eventDate",   label:"예식 날짜"},
+  {id:"eventTime",   label:"예식 시간"},
+  {id:"venueAddr",   label:"예식장 주소"},
   {id:"venueDetail", label:"예식장 세부"}
 ];
 
@@ -358,7 +348,6 @@ document.getElementById('btnCheck').addEventListener('click', async ()=>{
     const res = await fetch(reqUrl, { method:"GET", signal: controller.signal });
 
     if(!res.ok){
-      // 403/404 등 상태코드 표시
       const txt = await res.text().catch(()=> "");
       throw new Error(`요청 실패 (HTTP ${res.status}) ${txt ? "- " + txt.slice(0,120) : ""}`);
     }
@@ -367,6 +356,7 @@ document.getElementById('btnCheck').addEventListener('click', async ()=>{
     const payload = (data && typeof data==='object' && 'data' in data) ? (data.data || {}) : (data || {});
 
     if(data.ok){
+      // ====== 1) 폼 채우기 ======
       groomFather.value = payload.groomFather || "";
       groomMother.value = payload.groomMother || "";
       groomOrder.value  = payload.groomOrder  || "";
@@ -388,9 +378,32 @@ document.getElementById('btnCheck').addEventListener('click', async ()=>{
 
       // 장소
       venueAddr.value   = payload.venueAddr || "";
-      venueDetail.value = payload.venue     || "";
+      venueDetail.value = payload.venue     || payload.venueDetail || "";
 
-      // detail 페이지에서 활용할 수 있도록 원문 payload도 저장 (전화/계좌 포함)
+      // ====== 2) Detail에서 사용할 제안값 저장 (연락처/계좌 전원) ======
+      const aiSuggestions = {
+        groomPhone:        payload.groomPhone        || "",
+        bridePhone:        payload.bridePhone        || "",
+        groomFatherPhone:  payload.groomFatherPhone  || "",
+        groomMotherPhone:  payload.groomMotherPhone  || "",
+        brideFatherPhone:  payload.brideFatherPhone  || "",
+        brideMotherPhone:  payload.brideMotherPhone  || "",
+        groomBank:         payload.groomBank         || "",
+        groomAccount:      payload.groomAccount      || "",
+        brideBank:         payload.brideBank         || "",
+        brideAccount:      payload.brideAccount      || "",
+        groomFatherBank:   payload.groomFatherBank   || "",
+        groomFatherAccount:payload.groomFatherAccount|| "",
+        groomMotherBank:   payload.groomMotherBank   || "",
+        groomMotherAccount:payload.groomMotherAccount|| "",
+        brideFatherBank:   payload.brideFatherBank   || "",
+        brideFatherAccount:payload.brideFatherAccount|| "",
+        brideMotherBank:   payload.brideMotherBank   || "",
+        brideMotherAccount:payload.brideMotherAccount|| ""
+      };
+      localStorage.setItem('ai_suggestions', JSON.stringify(aiSuggestions));
+
+      // ====== 3) 원문 payload 저장 (추적/디버그용) ======
       localStorage.setItem('inviteExtractRaw', JSON.stringify(payload));
 
       msg.textContent="✅ AI로 예식 정보가 입력되었습니다. 확인 바랍니다."; msg.style.color="green";
@@ -742,10 +755,10 @@ document.addEventListener('click', (e)=>{
   const btn = e.target.closest('.seg__btn'); if(!btn) return;
   const seg = btn.closest('.seg'); const hiddenId = seg?.getAttribute('data-for');
   const hidden = hiddenId ? document.getElementById(hiddenId) : null;
-  if(!seg || !hidden) return;
+  if(!seg) return;
   seg.querySelectorAll('.seg__btn').forEach(b=>{ b.setAttribute('aria-pressed','false'); b.classList.remove('is-selected'); });
   btn.setAttribute('aria-pressed','true'); btn.classList.add('is-selected');
-  hidden.value = btn.dataset.value || '';
+  if(hidden) hidden.value = btn.dataset.value || '';
 });
 
 /* ================== 수기 입력 모드 전환 ================== */
