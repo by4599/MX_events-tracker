@@ -385,7 +385,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 
       // 5-2) JSONP 테스트 결과를 배지에 표시(응답이 오는지부터 확인)
       const ENDPOINT = (window.__ENDPOINT_OVERRIDE__) || 
-        "<?= 여기에 본인 GAS exec URL 을 넣고, 기존 스크립트에도 동일하게 설정 ?>";
+        "https://script.google.com/macros/s/AKfycbwsBf2tcQ_17Fpu_yDcEcn4uQDnZ0T8bU5L9KJtkgCCvXOsn5IfKEwVTP5_o7-fQmbvww/exec";
       const url = ($('inviteUrl')?.value || '').trim();
       if(!url){ say('input url?'); return; }
 
