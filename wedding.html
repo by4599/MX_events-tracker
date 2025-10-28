@@ -315,133 +315,386 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 /** ✅ 여기를 실제 웹앱 URL로 교체 */
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbwsBf2tcQ_17Fpu_yDcEcn4uQDnZ0T8bU5L9KJtkgCCvXOsn5IfKEwVTP5_o7-fQmbvww/exec";
 
-/* 필수 입력 항목 목록 */
+/* 필수 입력 항목 */
 const requiredFields = [
   {id:"groomFather", label:"신랑 아버지 성함"},
   {id:"groomMother", label:"신랑 어머니 성함"},
-  {id:"groomOrder",  label:"신랑 형제관계"},
-  {id:"groomName",   label:"신랑 성명"},
+  {id:"groomOrder", label:"신랑 형제관계"},
+  {id:"groomName", label:"신랑 성명"},
   {id:"brideFather", label:"신부 아버지 성함"},
   {id:"brideMother", label:"신부 어머니 성함"},
-  {id:"brideOrder",  label:"신부 형제관계"},
-  {id:"brideName",   label:"신부 성명"},
-  {id:"eventDate",   label:"예식 날짜"},
-  {id:"eventTime",   label:"예식 시간"},
-  {id:"venueAddr",   label:"예식장 주소"},
+  {id:"brideOrder", label:"신부 형제관계"},
+  {id:"brideName", label:"신부 성명"},
+  {id:"eventDate", label:"예식 날짜"},
+  {id:"eventTime", label:"예식 시간"},
+  {id:"venueAddr", label:"예식장 주소"},
   {id:"venueDetail", label:"예식장 세부"}
 ];
 
-/* ================== JSONP 폴백 유틸 ================== */
-async function fetchJsonWithJsonpFallback(url) {
-  try {
-    const res = await fetch(url, { method: "GET" });
-    if (res.ok) return await res.json();
-    throw new Error(`HTTP ${res.status}`);
-  } catch (_) {
-    return new Promise((resolve, reject) => {
-      const cb = `__gas_cb_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      window[cb] = (data) => {
-        try { resolve(data); }
-        finally {
-          delete window[cb];
-          if (s && s.parentNode) s.parentNode.removeChild(s);
-        }
+/* ================== 유틸 ================== */
+const pad = n => String(n).padStart(2,'0');
+const pretty = iso => (iso ? iso.split('-').join('.') : '');
+function setIfEmpty(el, val){ if(el && !String(el.value||'').trim() && val) el.value = val; }
+function fireChange(el){ try{ el.dispatchEvent(new Event('change',{bubbles:true})); }catch(_){} }
+
+/* ================== JSONP 호출 ================== */
+function callJSONP(url, params, cb){
+  const cbName = "__invCb_" + Math.random().toString(36).slice(2);
+  window[cbName] = (data) => {
+    try { cb(null, data); } finally {
+      delete window[cbName];
+      script.remove();
+    }
+  };
+  const qs = new URLSearchParams({...params, callback: cbName}).toString();
+  const script = document.createElement('script');
+  script.src = url + "?" + qs;
+  script.onerror = () => { try{ cb(new Error("JSONP load error")); } finally { delete window[cbName]; script.remove(); } };
+  document.head.appendChild(script);
+}
+
+/* ================== AI 분석 버튼 ================== */
+document.getElementById('btnCheck').addEventListener('click', ()=>{
+  const msg = document.getElementById('msg');
+  const url = document.getElementById('inviteUrl').value.trim();
+  if(!url){ msg.textContent="❌ 청첩장 URL을 입력하세요."; msg.style.color="red"; return; }
+
+  msg.textContent="⏳ AI로 분석 중입니다..."; msg.style.color="#333";
+
+  callJSONP(ENDPOINT, {action:"extract", url}, (err, data)=>{
+    if(err){ msg.textContent = "❌ 호출 실패(JSONP): " + err.message; msg.style.color="red"; return; }
+    try{
+      const ok = data && data.ok !== false;
+      const payload = (data && data.data) ? data.data : (data || {});
+      if(!ok){ throw new Error(data && data.error ? data.error : "Unknown"); }
+
+      // === 필드 매핑 ===
+      const groomFather = document.getElementById('groomFather');
+      const groomMother = document.getElementById('groomMother');
+      const groomOrder  = document.getElementById('groomOrder');
+      const groomName   = document.getElementById('groomName');
+      const brideFather = document.getElementById('brideFather');
+      const brideMother = document.getElementById('brideMother');
+      const brideOrder  = document.getElementById('brideOrder');
+      const brideName   = document.getElementById('brideName');
+      const venueAddr   = document.getElementById('venueAddr');
+      const venueDetail = document.getElementById('venueDetail');
+
+      // 기본 인적/장소
+      setIfEmpty(groomFather, payload.groomFather);
+      setIfEmpty(groomMother, payload.groomMother);
+      setIfEmpty(groomName,   payload.groomName);
+      setIfEmpty(brideFather, payload.brideFather);
+      setIfEmpty(brideMother, payload.brideMother);
+      setIfEmpty(brideName,   payload.brideName);
+
+      // 형제관계(커스텀 셀렉트 동기화 포함)
+      function setOrder(selectEl, value){
+        if(!value) return;
+        selectEl.value = value;
+        fireChange(selectEl);          // 내부 렌더러 갱신
+        renderOneSelect(selectEl);     // 강제 재렌더
+      }
+      setOrder(groomOrder, payload.groomOrder);
+      setOrder(brideOrder, payload.brideOrder);
+
+      // 날짜/시간 정규화
+      const dateRaw = payload.eventDate || payload.date || "";
+      const timeRaw = payload.eventTime || payload.time || "";
+      const fromTime = extractDateAndTimeKR(timeRaw);
+      const fromDate = extractDateAndTimeKR(dateRaw);
+      const finalDate = fromTime.date || fromDate.date || "";
+      const finalTime = normalizeToHHMM(timeRaw) || fromTime.time || normalizeToHHMM(fromDate.time||"") || "";
+      setDateDisplay(finalDate);
+      setTimeDisplay(finalTime);
+
+      // 장소
+      setIfEmpty(venueAddr,   payload.venueAddr);
+      setIfEmpty(venueDetail, payload.venue);
+
+      // 연락처/계좌 → Wedding_Detail에서 사용할 Suggest 저장
+      const ai = {
+        groomPhone: payload.groomPhone || "",
+        bridePhone: payload.bridePhone || "",
+        groomFatherPhone: payload.groomFatherPhone || "",
+        groomMotherPhone: payload.groomMotherPhone || "",
+        brideFatherPhone: payload.brideFatherPhone || "",
+        brideMotherPhone: payload.brideMotherPhone || "",
+        groomBank: payload.groomBank || "", groomAccount: payload.groomAccount || "",
+        brideBank: payload.brideBank || "", brideAccount: payload.brideAccount || "",
+        groomFatherBank: payload.groomFatherBank || "", groomFatherAccount: payload.groomFatherAccount || "",
+        groomMotherBank: payload.groomMotherBank || "", groomMotherAccount: payload.groomMotherAccount || "",
+        brideFatherBank: payload.brideFatherBank || "", brideFatherAccount: payload.brideFatherAccount || "",
+        brideMotherBank: payload.brideMotherBank || "", brideMotherAccount: payload.brideMotherAccount || ""
       };
-      const join = url.includes("?") ? "&" : "?";
-      const s = document.createElement("script");
-      s.src = `${url}${join}callback=${cb}`;
-      s.onerror = () => { delete window[cb]; reject(new Error("JSONP failed")); };
-      document.head.appendChild(s);
-    });
-  }
-}
+      localStorage.setItem('ai_suggestions', JSON.stringify(ai));
 
-/* ================== 헬퍼 함수 ================== */
-const $ = (id)=>document.getElementById(id);
-const pad = (n)=>String(n).padStart(2,'0');
-const pretty = (iso)=> (iso ? iso.split('-').join('.') : '');
+      // Detail에서 재활용할 원문 payload 저장
+      localStorage.setItem('inviteExtractRaw', JSON.stringify(payload));
 
-/* 형제관계 커스텀 셀렉트 값 갱신용 헬퍼 */
-function setSelectAndRefresh(selectId, rawValue){
-  const sel = document.getElementById(selectId);
-  if(!sel) return;
-  const norm = (rawValue || '').trim()
-    .replace(/\s+/g,'')
-    .replace(/첫째아들|장자|첫째(?=남)/g,'장남')
-    .replace(/첫째딸|장녀|첫째(?=녀)/g,'장녀');
-  const hit = [...sel.options].find(o =>
-    o.value.replace(/\s+/g,'') === norm ||
-    o.textContent.replace(/\s+/g,'') === norm
-  );
-  sel.value = hit ? hit.value : '';
-  sel.dispatchEvent(new Event('change'));
-  const wrap = document.querySelector(`.cselect[data-for="${selectId}"]`);
-  const btn  = wrap?.querySelector('.cselect__btn');
-  const txt  = sel.selectedOptions[0]?.textContent || '선택';
-  if(btn){
-    if(!btn.firstChild) btn.appendChild(document.createTextNode(txt));
-    else btn.firstChild.nodeValue = txt;
-  }
-}
+      msg.textContent="✅ AI로 예식 정보가 입력되었습니다. 확인 바랍니다."; msg.style.color="green";
+    }catch(e){
+      msg.textContent = "❌ 분석 실패: " + e.message;
+      msg.style.color="red";
+    }
+  });
+});
 
-/* ================== 커스텀 셀렉트(형제관계) ================== */
+/* ================== 커스텀 셀렉트 ================== */
 function enhanceSelect(selectEl){
   const wrap = document.querySelector(`.cselect[data-for="${selectEl.id}"]`);
   if(!wrap) return;
-  const btn  = wrap.querySelector('.cselect__btn');
+  const btn = wrap.querySelector('.cselect__btn');
   const list = wrap.querySelector('.cselect__list');
+  if(btn && !btn.firstChild) btn.appendChild(document.createTextNode('선택'));
+
   function render(){
-    list.innerHTML='';
+    if(!list) return;
+    list.innerHTML = '';
     [...selectEl.options].forEach(opt=>{
       const div=document.createElement('div');
-      div.className='cselect__option';
-      div.dataset.value=opt.value;
-      div.textContent=opt.textContent;
-      div.setAttribute('aria-selected',String(opt.selected));
-      div.addEventListener('click',()=>{
-        selectEl.value=opt.value;
-        btn.firstChild.nodeValue=opt.textContent;
+      div.className='cselect__option'; div.setAttribute('role','option');
+      div.dataset.value = opt.value; div.textContent = opt.textContent;
+      div.setAttribute('aria-selected', String(opt.selected));
+      div.addEventListener('click', ()=>{
+        selectEl.value = opt.value;
+        if(btn && btn.firstChild) btn.firstChild.nodeValue = opt.textContent || '선택';
         [...list.children].forEach(n=>n.setAttribute('aria-selected','false'));
         div.setAttribute('aria-selected','true');
-        list.classList.remove('is-open');
-        btn.setAttribute('aria-expanded','false');
-        selectEl.dispatchEvent(new Event('change'));
+        list.classList.remove('is-open'); btn.setAttribute('aria-expanded','false');
+        fireChange(selectEl);
       });
       list.appendChild(div);
     });
-    const selOpt=selectEl.selectedOptions[0];
-    if(!btn.firstChild) btn.appendChild(document.createTextNode('선택'));
-    btn.firstChild.nodeValue=selOpt?selOpt.textContent:'선택';
+    const selOpt = selectEl.selectedOptions[0];
+    if(btn && btn.firstChild) btn.firstChild.nodeValue = selOpt ? selOpt.textContent : '선택';
   }
+
   render();
-  btn.addEventListener('click',()=>{
-    const open=list.classList.toggle('is-open');
-    btn.setAttribute('aria-expanded',String(open));
-  });
-  document.addEventListener('click',(e)=>{
+  if(btn){
+    btn.addEventListener('click', ()=>{
+      const open = list.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', String(open));
+    });
+  }
+  document.addEventListener('click', (e)=>{
     if(!wrap.contains(e.target)){
-      list.classList.remove('is-open');
-      btn.setAttribute('aria-expanded','false');
+      list.classList.remove('is-open'); btn && btn.setAttribute('aria-expanded','false');
     }
   });
-  selectEl.addEventListener('change',render);
+  selectEl.addEventListener('change', render);
+
+  // 내부 재렌더 함수 노출(프로그램적 값 변경 후 호출)
+  selectEl.__render = render;
 }
+function renderOneSelect(selectEl){ if(selectEl && typeof selectEl.__render === 'function') selectEl.__render(); }
+
 document.querySelectorAll('select[data-ui="custom-select"]').forEach(enhanceSelect);
 
-/* ================== 스몰웨딩·화환 토글 ================== */
-document.addEventListener('click',(e)=>{
-  const btn=e.target.closest('.seg__btn'); if(!btn) return;
-  const seg=btn.closest('.seg'); const hiddenId=seg?.getAttribute('data-for');
-  const hidden=hiddenId?$(hiddenId):null;
-  if(!seg||!hidden) return;
-  seg.querySelectorAll('.seg__btn').forEach(b=>{
-    b.setAttribute('aria-pressed','false'); b.classList.remove('is-selected');
-  });
-  btn.setAttribute('aria-pressed','true'); btn.classList.add('is-selected');
-  hidden.value=btn.dataset.value||'';
+/* ================== 세그(스몰/화환) ================== */
+document.addEventListener('click', (e)=>{
+  const b = e.target.closest('button.btn[data-seg]');
+  if(!b) return;
+  const seg = b.getAttribute('data-seg');
+  const wrap = b.parentElement;
+  const hiddenId = wrap.getAttribute('data-for');
+  const hidden = document.getElementById(hiddenId);
+  [...wrap.querySelectorAll('button.btn[data-seg="'+seg+'"]')]
+    .forEach(x=>x.classList.remove('primary'));
+  b.classList.add('primary');
+  hidden.value = b.getAttribute('data-value') || '';
 });
 
-/* ================== 날짜/시간 파서 ================== */
+/* ================== 모달 열고/닫기 ================== */
+const backdrop = document.getElementById('pickerBackdrop');
+const datePicker = document.getElementById('datePicker');
+const timePicker = document.getElementById('timePicker');
+const dateDisplay = document.getElementById('eventDateDisplay');
+const timeDisplay = document.getElementById('eventTimeDisplay');
+const dateHidden = document.getElementById('eventDate');
+const timeHidden = document.getElementById('eventTime');
+function openPicker(el){ backdrop.style.display='block'; el.style.display='block'; }
+function closePicker(){ backdrop.style.display='none'; datePicker.style.display='none'; timePicker.style.display='none'; }
+backdrop.addEventListener('click', closePicker);
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closePicker(); });
+
+/* ================== 달력 렌더 ================== */
+const calGrid = document.getElementById('calGrid');
+const calYear = document.getElementById('calYear');
+const calMonth = document.getElementById('calMonth');
+const tempDate = document.getElementById('tempDate');
+const dateYM = document.getElementById('dateYM');
+const dateSelectedText = document.getElementById('dateSelectedText');
+
+function weekdayK(y,m,d){
+  const days = ['일','월','화','수','목','금','토'];
+  return days[new Date(y, m-1, d).getDay()];
+}
+function setWeekendClass(el, dow){
+  if(dow === 0) el.classList.add('sun');
+  if(dow === 6) el.classList.add('sat');
+}
+function toIso(y,m,d){ return `${y}-${pad(m)}-${pad(d)}`; }
+
+function renderCal(y, m, selectedIso){
+  calYear.value=y; calMonth.value=m;
+  dateYM.textContent = `${y}.${pad(m)}`;
+  calGrid.innerHTML='';
+
+  const first = new Date(y, m-1, 1);
+  const startDow = first.getDay();
+  const daysInMonth = new Date(y, m, 0).getDate();
+
+  const today = new Date();
+  const todayIso = toIso(today.getFullYear(), today.getMonth()+1, today.getDate());
+
+  for(let i=0;i<startDow;i++){
+    const d = new Date(y, m-1, 1 - (startDow - i));
+    const div = document.createElement('div');
+    div.className='cal-day out';
+    div.textContent = String(d.getDate());
+    setWeekendClass(div, d.getDay());
+    calGrid.appendChild(div);
+  }
+
+  for(let d=1; d<=daysInMonth; d++){
+    const iso = toIso(y, m, d);
+    const dow = new Date(y, m-1, d).getDay();
+    const btn = document.createElement('button');
+    btn.type='button'; btn.className='cal-day'; btn.textContent=String(d);
+
+    setWeekendClass(btn, dow);
+    if(iso===todayIso) btn.classList.add('today');
+    if(selectedIso && iso===selectedIso) btn.classList.add('sel');
+
+    btn.addEventListener('click', ()=>{
+      tempDate.value = iso;
+      [...calGrid.querySelectorAll('.cal-day')].forEach(b=>b.classList.remove('sel'));
+      btn.classList.add('sel');
+      dateSelectedText.textContent = `선택된 날짜: ${pretty(iso)}(${weekdayK(y,m,d)})`;
+    });
+
+    calGrid.appendChild(btn);
+  }
+}
+document.getElementById('prevMonth').addEventListener('click', ()=>{
+  let y=Number(calYear.value), m=Number(calMonth.value)-1; if(m<1){m=12;y--;}
+  renderCal(y,m,tempDate.value||dateHidden.value||'');
+});
+document.getElementById('nextMonth').addEventListener('click', ()=>{
+  let y=Number(calYear.value), m=Number(calMonth.value)+1; if(m>12){m=1;y++;}
+  renderCal(y,m,tempDate.value||dateHidden.value||'');
+});
+document.getElementById('dateCancel').addEventListener('click', closePicker);
+document.getElementById('dateConfirm').addEventListener('click', ()=>{
+  const iso = tempDate.value;
+  if(iso){
+    const [yy,mm,dd] = iso.split('-').map(n=>+n);
+    dateHidden.value = iso;
+    dateDisplay.value = pretty(iso);
+    dateDisplay.removeAttribute('aria-invalid');
+    dateSelectedText.textContent = `선택된 날짜: ${pretty(iso)}(${weekdayK(yy,mm,dd)})`;
+  }else{
+    dateDisplay.setAttribute('aria-invalid','true');
+  }
+  closePicker();
+});
+function setDateDisplay(iso){
+  dateHidden.value = iso || '';
+  if(iso){
+    const [yy,mm,dd] = iso.split('-').map(n=>+n);
+    dateDisplay.value = pretty(iso);
+    dateSelectedText.textContent = `선택된 날짜: ${pretty(iso)}(${weekdayK(yy,mm,dd)})`;
+  }else{
+    dateDisplay.value = '';
+    dateSelectedText.textContent = '';
+  }
+}
+dateDisplay.addEventListener('click', ()=>{
+  openPicker(datePicker);
+  const base = dateHidden.value ? new Date(dateHidden.value) : new Date();
+  tempDate.value = dateHidden.value || '';
+  if(tempDate.value){
+    const [yy,mm,dd] = tempDate.value.split('-').map(n=>+n);
+    dateSelectedText.textContent = `선택된 날짜: ${pretty(tempDate.value)}(${weekdayK(yy,mm,dd)})`;
+  }else{
+    dateSelectedText.textContent = '';
+  }
+  renderCal(base.getFullYear(), base.getMonth()+1, tempDate.value);
+});
+
+/* ================== 시간 피커 ================== */
+const ampmCol = document.getElementById('ampmCol');
+const hourCol = document.getElementById('hourCol');
+const minCol  = document.getElementById('minCol');
+const tempHour = document.getElementById('tempHour');
+const tempMin  = document.getElementById('tempMin');
+let tempAmpm = '오전';
+
+function to12h(h24){
+  const n = parseInt(h24,10);
+  if(isNaN(n)) return {ampm:'오전', h:'12'};
+  if(n===0) return {ampm:'오전', h:'12'};
+  if(n===12) return {ampm:'오후', h:'12'};
+  if(n>12) return {ampm:'오후', h:String(n-12).padStart(2,'0')};
+  return {ampm:'오전', h:String(n).padStart(2,'0')};
+}
+function to24h(ampm, h12){
+  let n = parseInt(h12,10) || 0;
+  if(ampm==='오전'){ if(n===12) n=0; }
+  else{ if(n<12) n+=12; }
+  return String(n).padStart(2,'0');
+}
+function renderTimeCols(selAmpm='오전', selH='12', selM='00'){
+  ampmCol.innerHTML='';
+  ['오전','오후'].forEach(v=>{
+    const b=document.createElement('button'); b.type='button'; b.className='time-item'; b.textContent=v; b.dataset.v=v;
+    if(v===selAmpm) b.classList.add('sel');
+    b.addEventListener('click', ()=>{ tempAmpm=v; ampmCol.querySelectorAll('.time-item').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); });
+    ampmCol.appendChild(b);
+  });
+
+  hourCol.innerHTML='';
+  for(let h=1; h<=12; h++){
+    const v=String(h).padStart(2,'0');
+    const b=document.createElement('button'); b.type='button'; b.className='time-item'; b.textContent=v; b.dataset.v=v;
+    if(v===selH) b.classList.add('sel');
+    b.addEventListener('click', ()=>{ tempHour.value=v; hourCol.querySelectorAll('.time-item').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); b.scrollIntoView({block:'center', behavior:'smooth'}); });
+    hourCol.appendChild(b);
+  }
+
+  minCol.innerHTML='';
+  ['00','10','20','30','40','50'].forEach(v=>{
+    const b=document.createElement('button'); b.type='button'; b.className='time-item'; b.textContent=v; b.dataset.v=v;
+    if(v===selM) b.classList.add('sel');
+    b.addEventListener('click', ()=>{ tempMin.value=v; minCol.querySelectorAll('.time-item').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); b.scrollIntoView({block:'center', behavior:'smooth'}); });
+    minCol.appendChild(b);
+  });
+}
+timeDisplay.addEventListener('click', ()=>{
+  openPicker(timePicker);
+  const v = timeHidden.value;
+  let h='12', m='00'; tempAmpm='오전';
+  if(/^\d{2}:\d{2}$/.test(v)){ const [hh,mm] = v.split(':'); const t=to12h(hh); tempAmpm=t.ampm; h=t.h; m=mm; }
+  tempHour.value=h; tempMin.value=m;
+  renderTimeCols(tempAmpm, h, m);
+});
+document.getElementById('timeCancel').addEventListener('click', closePicker);
+document.getElementById('timeConfirm').addEventListener('click', ()=>{
+  const h12=tempHour.value, m=tempMin.value;
+  if(h12 && m){
+    const hh = to24h(tempAmpm, h12);
+    const val = `${hh}:${m}`;
+    timeHidden.value = val;
+    timeDisplay.value = `${tempAmpm} ${h12}:${m}`;
+    timeDisplay.removeAttribute('aria-invalid');
+  }else{
+    timeDisplay.setAttribute('aria-invalid','true');
+  }
+  closePicker();
+});
+
+/* ================== 시간/날짜 파서 ================== */
 function normalizeToHHMM(raw){
   if(!raw) return '';
   let s = String(raw).trim()
@@ -449,12 +702,15 @@ function normalizeToHHMM(raw){
     .replace(/시/g,':')
     .replace(/분/g,'')
     .replace(/\.00\b/g,':00');
+
   if(/^\d{3,4}$/.test(s) && !s.includes(':')){
     const mm = s.slice(-2), hh = s.slice(0, s.length-2);
     s = `${hh}:${mm}`;
   }
+
   const hms = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
   const ap  = s.match(/^(오전|오후|AM|PM|am|pm)\s*(\d{1,2})(?::|시)?\s*(\d{2})?$/);
+
   if(ap){
     const ampm = ap[1].toLowerCase();
     let h12 = parseInt(ap[2],10);
@@ -463,6 +719,7 @@ function normalizeToHHMM(raw){
     else { if(h12<12) h12+=12; }
     return `${String(h12).padStart(2,'0')}:${mm}`;
   }
+
   if(hms){
     let hh = parseInt(hms[1],10);
     const mm = hms[2];
@@ -472,151 +729,88 @@ function normalizeToHHMM(raw){
   return '';
 }
 function extractDateAndTimeKR(raw){
-  const out={date:'',time:''};
+  const out = { date:'', time:'' };
   if(!raw) return out;
-  const s=String(raw).trim();
-  const re=/(?:(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일)?(?:\s*[일월화수목금토]요일)?(?:\s*(오전|오후|AM|PM|am|pm)?\s*(\d{1,2})(?:\s*시)?(?:\s*(\d{1,2})\s*분?)?)?/;
-  const m=s.match(re);
+  const s = String(raw).trim();
+  const re = /(?:(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일)?(?:\s*[일월화수목금토]요일)?(?:\s*(오전|오후|AM|PM|am|pm)?\s*(\d{1,2})(?:\s*시)?(?:\s*(\d{1,2})\s*분?)?)?/;
+  const m = s.match(re);
   if(m){
-    const[,yy,mm,dd,ap,hStr,minStr]=m;
-    if(yy&&mm&&dd) out.date=`${yy}-${pad(mm)}-${pad(dd)}`;
+    const [, yy, mm, dd, ap, hStr, minStr] = m;
+    if(yy && mm && dd){
+      out.date = `${yy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+    }
     if(hStr){
-      const mm2=minStr?pad(minStr):'00';
+      const mm2 = minStr?String(minStr).padStart(2,'0'):'00';
       if(ap){
-        let h=parseInt(hStr,10)||0;
-        const apLow=ap.toLowerCase();
+        let h = parseInt(hStr,10)||0;
+        const apLow = ap.toLowerCase();
         if(apLow==='오전'||apLow==='am'){ if(h===12) h=0; } else { if(h<12) h+=12; }
-        out.time=`${pad(h)}:${mm2}`;
-      }else out.time=normalizeToHHMM(`${hStr}:${mm2}`);
+        out.time = `${String(h).padStart(2,'0')}:${mm2}`;
+      }else{
+        out.time = normalizeToHHMM(`${hStr}:${mm2}`);
+      }
     }
   }
   if(!out.time){
-    const t=normalizeToHHMM(s); if(t) out.time=t;
+    const t = normalizeToHHMM(s);
+    if(t) out.time = t;
   }
   return out;
 }
-
-/* ================== 날짜·시간 표시 갱신 ================== */
-function setDateDisplay(iso){
-  const dateHidden=$('eventDate'), dateDisplay=$('eventDateDisplay');
-  const weekdayK=(y,m,d)=>['일','월','화','수','목','금','토'][new Date(y,m-1,d).getDay()];
-  dateHidden.value=iso||'';
-  if(iso){
-    const[yy,mm,dd]=iso.split('-').map(n=>+n);
-    dateDisplay.value=pretty(iso);
-    $('dateSelectedText').textContent=`선택된 날짜: ${pretty(iso)}(${weekdayK(yy,mm,dd)})`;
-  }else{
-    dateDisplay.value=''; $('dateSelectedText').textContent='';
-  }
-}
 function setTimeDisplay(v){
-  const timeHidden=$('eventTime'), timeDisplay=$('eventTimeDisplay');
-  function to12h(h24){
-    const n=parseInt(h24,10);
-    if(isNaN(n)) return {ampm:'오전',h:'12'};
-    if(n===0) return {ampm:'오전',h:'12'};
-    if(n===12) return {ampm:'오후',h:'12'};
-    if(n>12) return {ampm:'오후',h:String(n-12).padStart(2,'0')};
-    return {ampm:'오전',h:String(n).padStart(2,'0')};
-  }
-  const norm=normalizeToHHMM(v);
+  const norm = normalizeToHHMM(v);
   if(norm){
-    timeHidden.value=norm;
-    const[hh,mm]=norm.split(':'); const t=to12h(hh);
-    timeDisplay.value=`${t.ampm} ${t.h}:${mm}`;
+    timeHidden.value = norm;
+    const [hh,mm] = norm.split(':'); const t=to12h(hh);
+    timeDisplay.value = `${t.ampm} ${t.h}:${mm}`;
     timeDisplay.removeAttribute('aria-invalid');
   }else{
-    timeHidden.value=''; timeDisplay.value='';
+    timeHidden.value = ''; timeDisplay.value = '';
   }
 }
 
-/* ================== AI 분석 버튼 ================== */
-$('btnCheck').addEventListener('click', async ()=>{
-  const msg=$('msg');
-  const url=$('inviteUrl').value.trim();
-  if(!url){ msg.textContent="❌ 청첩장 URL을 입력하세요."; msg.style.color="red"; return; }
-  msg.textContent="⏳ AI로 분석 중입니다..."; msg.style.color="#333";
-
-  try{
-    const reqUrl=ENDPOINT+"?action=extract&url="+encodeURIComponent(url);
-    const data=await fetchJsonWithJsonpFallback(reqUrl);
-    if(data && data.ok){
-      const payload=data.data||{};
-      groomFather.value=payload.groomFather||"";
-      groomMother.value=payload.groomMother||"";
-      groomName.value  =payload.groomName  ||"";
-      brideFather.value=payload.brideFather||"";
-      brideMother.value=payload.brideMother||"";
-      brideName.value  =payload.brideName  ||"";
-      // ✅ 형제관계 커스텀 셀렉트 갱신
-      setSelectAndRefresh('groomOrder', payload.groomOrder);
-      setSelectAndRefresh('brideOrder', payload.brideOrder);
-
-      const dateRaw=payload.eventDate||payload.date||"";
-      const timeRaw=payload.eventTime||payload.time||"";
-      const dtFromTime=extractDateAndTimeKR(timeRaw);
-      const dtFromDate=extractDateAndTimeKR(dateRaw);
-      const finalDate=dtFromTime.date||dtFromDate.date||dateRaw||"";
-      const finalTime=normalizeToHHMM(timeRaw)||dtFromTime.time||normalizeToHHMM(dtFromDate.time||"")||"";
-      setDateDisplay(finalDate);
-      setTimeDisplay(finalTime);
-
-      venueAddr.value   =payload.venueAddr||"";
-      venueDetail.value =payload.venue||"";
-
-      localStorage.setItem('inviteExtractRaw', JSON.stringify(payload));
-
-      const aiSuggest={
-        groomPhone:payload.groomPhone||"", bridePhone:payload.bridePhone||"",
-        groomFatherPhone:payload.groomFatherPhone||"", groomMotherPhone:payload.groomMotherPhone||"",
-        brideFatherPhone:payload.brideFatherPhone||"", brideMotherPhone:payload.brideMotherPhone||"",
-        groomBank:payload.groomBank||"", groomAccount:payload.groomAccount||"",
-        brideBank:payload.brideBank||"", brideAccount:payload.brideAccount||"",
-        groomFatherBank:payload.groomFatherBank||"", groomFatherAccount:payload.groomFatherAccount||"",
-        groomMotherBank:payload.groomMotherBank||"", groomMotherAccount:payload.groomMotherAccount||"",
-        brideFatherBank:payload.brideFatherBank||"", brideFatherAccount:payload.brideFatherAccount||"",
-        brideMotherBank:payload.brideMotherBank||"", brideMotherAccount:payload.brideMotherAccount||""
-      };
-      localStorage.setItem('ai_suggestions', JSON.stringify(aiSuggest));
-
-      msg.textContent="✅ AI로 예식 정보가 입력되었습니다. 확인 바랍니다."; msg.style.color="green";
-    }else{
-      throw new Error(data && data.error ? data.error : "Unknown");
-    }
-  }catch(err){
-    msg.textContent="❌ 분석 실패: "+err.message; msg.style.color="red";
-  }
-});
+/* ================== 수기 입력 모드 전환 ================== */
+const noInviteEl = document.getElementById('noInvite');
+const inviteUrlBlock = document.getElementById('inviteUrlBlock');
+const btnCheck = document.getElementById('btnCheck');
+function updateInviteMode(){
+  const off = noInviteEl.checked;
+  inviteUrlBlock.classList.toggle('hidden', off);
+  btnCheck.classList.toggle('hidden', off);
+  if(off){ document.getElementById('inviteUrl').value=''; }
+}
+noInviteEl.addEventListener('change', updateInviteMode);
+updateInviteMode();
 
 /* ================== 다음 단계 버튼 ================== */
-$('btnNext').addEventListener('click', ()=>{
+document.getElementById('btnNext').addEventListener('click', ()=>{
   for(const field of requiredFields){
-    const el=$(field.id);
+    const el=document.getElementById(field.id);
     if(!el || !String(el.value).trim()){
-      alert("❌ 필수 입력값이 누락되었습니다: "+field.label);
+      alert("❌ 필수 입력값이 누락되었습니다: " + field.label);
       return;
     }
   }
   const info={
-    inviteUrl:$('inviteUrl').value,
-    noInvite:$('noInvite').checked,
-    groomFather:$('groomFather').value,
-    groomMother:$('groomMother').value,
-    groomOrder:$('groomOrder').value,
-    groomName:$('groomName').value,
-    brideFather:$('brideFather').value,
-    brideMother:$('brideMother').value,
-    brideOrder:$('brideOrder').value,
-    brideName:$('brideName').value,
-    eventDate:$('eventDate').value,
-    eventTime:$('eventTime').value,
-    venueAddr:$('venueAddr').value,
-    venueDetail:$('venueDetail').value,
-    isSmallWedding:$('isSmallWeddingInput').value,
-    flower:$('flowerInput').value
+    inviteUrl:document.getElementById('inviteUrl').value,
+    noInvite:document.getElementById('noInvite').checked,
+    groomFather:document.getElementById('groomFather').value,
+    groomMother:document.getElementById('groomMother').value,
+    groomOrder:document.getElementById('groomOrder').value,
+    groomName:document.getElementById('groomName').value,
+    brideFather:document.getElementById('brideFather').value,
+    brideMother:document.getElementById('brideMother').value,
+    brideOrder:document.getElementById('brideOrder').value,
+    brideName:document.getElementById('brideName').value,
+    eventDate:document.getElementById('eventDate').value,
+    eventTime:document.getElementById('eventTime').value,
+    venueAddr:document.getElementById('venueAddr').value,
+    venueDetail:document.getElementById('venueDetail').value,
+    isSmallWedding:document.getElementById('isSmallWeddingInput').value,
+    flower:document.getElementById('flowerInput').value
   };
-  const raw=localStorage.getItem('inviteExtractRaw')||'';
-  if(raw) info._extract=JSON.parse(raw);
+  const raw = localStorage.getItem('inviteExtractRaw') || '';
+  if(raw) info._extract = JSON.parse(raw);
   localStorage.setItem('inviteInfo', JSON.stringify(info));
   location.href='wedding_detail.html';
 });
