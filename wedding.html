@@ -306,305 +306,411 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 
 <script>
 (function(){
-  "use strict";
+  "use strict";
 
-  /* === 0) 설정 === */
-  const ENDPOINT = "https://script.google.com/macros/s/AKfycbwsBf2tcQ_17Fpu_yDcEcn4uQDnZ0T8bU5L9KJtkgCCvXOsn5IfKEwVTP5_o7-fQmbvww/exec"; // ← 본인 exec URL
+  /* === 0) 설정 === */
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycbwsBf2tcQ_17Fpu_yDcEcn4uQDnZ0T8bU5L9KJtkgCCvXOsn5IfKEwVTP5_o7-fQmbvww/exec"; // ← 본인 exec URL
+  const POLLING_INTERVAL = 2000; // 🚨 2초마다 상태 확인 (비동기)
+  let currentPollingInterval = null; // 🚨 폴링 타이머 ID 저장용
 
-  /* === 1) DOM 헬퍼 === */
-  const $ = (id)=>document.getElementById(id);
-  let guardBadge = null;
-  const say = (m)=>{ if(guardBadge) guardBadge.textContent = "Guard: " + m; };
+  /* === 1) DOM 헬퍼 === */
+  const $ = (id)=>document.getElementById(id);
+  let guardBadge = null;
+  const say = (m)=>{ if(guardBadge) guardBadge.textContent = "Guard: " + m; };
+  const msgEl = $('msg'); // 메시지 엘리먼트 캐싱
 
-  /* === 2) 날짜/시간 유틸 (필수) === */
-  const pad = (n)=>String(n).padStart(2,'0');
-
-  function normalizeToHHMM(raw){
-    if(!raw) return '';
-    let s = String(raw).trim()
-      .replace(/\s+/g,' ')
-      .replace(/시/g,':')
-      .replace(/분/g,'')
-      .replace(/\.00\b/g,':00');
-    // 1300 -> 13:00
-    if(/^\d{3,4}$/.test(s) && !s.includes(':')){
-      const mm = s.slice(-2), hh = s.slice(0, s.length-2);
-      s = `${hh}:${mm}`;
-    }
-    const hms = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
-    const ap  = s.match(/^(오전|오후|AM|PM|am|pm)\s*(\d{1,2})(?::|시)?\s*(\d{2})?$/);
-    if(ap){
-      const ampm = ap[1].toLowerCase();
-      let h12 = parseInt(ap[2],10);
-      const mm = ap[3] || '00';
-      if(ampm==='오전' || ampm==='am'){ if(h12===12) h12=0; }
-      else { if(h12<12) h12+=12; }
-      return `${pad(h12)}:${mm}`;
-    }
-    if(hms){
-      let hh = parseInt(hms[1],10);
-      const mm = hms[2];
-      if(hh>24) hh = hh % 24;
-      return `${pad(hh)}:${mm}`;
-    }
-    return '';
+  function setMsg(text, color="red") {
+    msgEl.textContent = text;
+    msgEl.style.color = color;
   }
 
-  function extractDateAndTimeKR(raw){
-    const out = { date:'', time:'' };
-    if(!raw) return out;
-    const s = String(raw).trim();
-    // 예: 2025년 11월 8일 토요일 오후 3시 30분
-    const re = /(?:(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일)?(?:\s*[일월화수목금토]요일)?(?:\s*(오전|오후|AM|PM|am|pm)?\s*(\d{1,2})(?:\s*시)?(?:\s*(\d{1,2})\s*분?)?)?/;
-    const m = s.match(re);
-    if(m){
-      const [, yy, mm, dd, ap, hStr, minStr] = m;
-      if(yy && mm && dd){ out.date = `${yy}-${pad(mm)}-${pad(dd)}`; }
-      if(hStr){
-        const mm2 = minStr?pad(minStr):'00';
-        if(ap){
-          let h = parseInt(hStr,10)||0;
-          const apLow = ap.toLowerCase();
-          if(apLow==='오전'||apLow==='am'){ if(h===12) h=0; } else { if(h<12) h+=12; }
-          out.time = `${pad(h)}:${mm2}`;
-        }else{
-          out.time = normalizeToHHMM(`${hStr}:${mm2}`);
-        }
+  /* === 2) 날짜/시간 유틸 (기존 로직 유지) === */
+  const pad = (n)=>String(n).padStart(2,'0');
+
+  function normalizeToHHMM(raw){
+    if(!raw) return '';
+    let s = String(raw).trim()
+      .replace(/\s+/g,' ')
+      .replace(/시/g,':')
+      .replace(/분/g,'')
+      .replace(/\.00\b/g,':00');
+    // 1300 -> 13:00
+    if(/^\d{3,4}$/.test(s) && !s.includes(':')){
+      const mm = s.slice(-2), hh = s.slice(0, s.length-2);
+      s = `${hh}:${mm}`;
+    }
+    const hms = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    const ap  = s.match(/^(오전|오후|AM|PM|am|pm)\s*(\d{1,2})(?::|시)?\s*(\d{2})?$/);
+    if(ap){
+      const ampm = ap[1].toLowerCase();
+      let h12 = parseInt(ap[2],10);
+      const mm = ap[3] || '00';
+      if(ampm==='오전' || ampm==='am'){ if(h12===12) h12=0; }
+      else { if(h12<12) h12+=12; }
+      return `${pad(h12)}:${mm}`;
+    }
+    if(hms){
+      let hh = parseInt(hms[1],10);
+      const mm = hms[2];
+      if(hh>24) hh = hh % 24;
+      return `${pad(hh)}:${mm}`;
+    }
+    return '';
+  }
+
+  function extractDateAndTimeKR(raw){
+    const out = { date:'', time:'' };
+    if(!raw) return out;
+    const s = String(raw).trim();
+    // 예: 2025년 11월 8일 토요일 오후 3시 30분
+    const re = /(?:(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일)?(?:\s*[일월화수목금토]요일)?(?:\s*(오전|오후|AM|PM|am|pm)?\s*(\d{1,2})(?:\s*시)?(?:\s*(\d{1,2})\s*분?)?)?/;
+    const m = s.match(re);
+    if(m){
+      const [, yy, mm, dd, ap, hStr, minStr] = m;
+      if(yy && mm && dd){ out.date = `${yy}-${pad(mm)}-${pad(dd)}`; }
+      if(hStr){
+        const mm2 = minStr?pad(minStr):'00';
+        if(ap){
+          let h = parseInt(hStr,10)||0;
+          const apLow = ap.toLowerCase();
+          if(apLow==='오전'||apLow==='am'){ if(h===12) h=0; } else { if(h<12) h+=12; }
+          out.time = `${pad(h)}:${mm2}`;
+        }else{
+          out.time = normalizeToHHMM(`${hStr}:${mm2}`);
+        }
+      }
+    }
+    if(!out.time){
+      const t = normalizeToHHMM(s);
+      if(t) out.time = t;
+    }
+    return out;
+  }
+
+  function to12h(h24){
+    const n = parseInt(h24,10);
+    if(isNaN(n)) return {ampm:'오전', h:'12'};
+    if(n===0) return {ampm:'오전', h:'12'};
+    if(n===12) return {ampm:'오후', h:'12'};
+    if(n>12) return {ampm:'오후', h:String(n-12).padStart(2,'0')};
+    return {ampm:'오전', h:String(n).padStart(2,'0')};
+  }
+
+  function setDateDisplay(iso){
+    const dateHidden = $('eventDate');
+    const dateDisplay = $('eventDateDisplay');
+    const pretty = (x)=> x ? x.split('-').join('.') : '';
+    dateHidden.value = iso || '';
+    dateDisplay.value = iso ? pretty(iso) : '';
+    dateDisplay.removeAttribute('aria-invalid');
+  }
+
+  function setTimeDisplay(v){
+    const timeHidden = $('eventTime');
+    const timeDisplay = $('eventTimeDisplay');
+    const norm = normalizeToHHMM(v);
+    if(norm){
+      timeHidden.value = norm;
+      const [hh,mm] = norm.split(':'); const t = to12h(hh);
+      timeDisplay.value = `${t.ampm} ${t.h}:${mm}`;
+      timeDisplay.removeAttribute('aria-invalid');
+    }else{
+      timeHidden.value = ''; timeDisplay.value = '';
+    }
+  }
+  
+  /* === 3) JSONP 요청 유틸리티 (폴링을 위해 재작성) === */
+  function loadJsonpScript(url, callbackName){
+    const cb = callbackName || "__cb__" + Math.random().toString(36).slice(2);
+    const s = document.createElement('script');
+    const full = url + (url.includes('?')?'&':'?') + "callback=" + cb;
+    window[cb]=function(d){ 
+      // 콜백 실행 후 window[cb]를 삭제 (폴링 시 재활용 방지)
+      if(callbackName) window[callbackName](d); else { delete window[cb]; }
+    };
+    s.onerror=function(){
+      // 네트워크 오류 시 폴링 중지
+      if (currentPollingInterval) { 
+          clearInterval(currentPollingInterval); 
+          setMsg("❌ 네트워크 오류로 인해 추출 실패. 서버 상태를 확인하세요.");
+          currentPollingInterval = null;
       }
-    }
-    if(!out.time){
-      const t = normalizeToHHMM(s);
-      if(t) out.time = t;
-    }
-    return out;
-  }
+      if(s.parentNode) s.parentNode.removeChild(s);
+    };
+    s.onload = function() {
+        if(s.parentNode) s.parentNode.removeChild(s);
+    };
+    s.src=full; document.head.appendChild(s);
+    return cb;
+  }
+  
+  // REMOVED: 기존 Promise 기반 jsonp 함수 제거
 
-  function to12h(h24){
-    const n = parseInt(h24,10);
-    if(isNaN(n)) return {ampm:'오전', h:'12'};
-    if(n===0) return {ampm:'오전', h:'12'};
-    if(n===12) return {ampm:'오후', h:'12'};
-    if(n>12) return {ampm:'오후', h:String(n-12).padStart(2,'0')};
-    return {ampm:'오전', h:String(n).padStart(2,'0')};
-  }
+  /* === 4) 비동기 폴링 로직 (ADDED) === */
 
-  function setDateDisplay(iso){
-    const dateHidden = $('eventDate');
-    const dateDisplay = $('eventDateDisplay');
-    const pretty = (x)=> x ? x.split('-').join('.') : '';
-    dateHidden.value = iso || '';
-    dateDisplay.value = iso ? pretty(iso) : '';
-    dateDisplay.removeAttribute('aria-invalid');
-  }
-
-  function setTimeDisplay(v){
-    const timeHidden = $('eventTime');
-    const timeDisplay = $('eventTimeDisplay');
-    const norm = normalizeToHHMM(v);
-    if(norm){
-      timeHidden.value = norm;
-      const [hh,mm] = norm.split(':'); const t = to12h(hh);
-      timeDisplay.value = `${t.ampm} ${t.h}:${mm}`;
-      timeDisplay.removeAttribute('aria-invalid');
-    }else{
-      timeHidden.value = ''; timeDisplay.value = '';
-    }
-  }
-
-  /* === 3) JSONP 요청 === */
-  function jsonp(url, timeoutMs=25000){
-    return new Promise((resolve,reject)=>{
-      const cb = "__cb__" + Math.random().toString(36).slice(2);
-      const s = document.createElement('script');
-      const full = url + (url.includes('?')?'&':'?') + "callback=" + cb;
-      let done=false;
-      const timer=setTimeout(()=>{ if(!done){done=true; cleanup(); reject(new Error("JSONP timeout"));}}, timeoutMs);
-      function cleanup(){ try{ delete window[cb]; }catch{} if(s.parentNode) s.parentNode.removeChild(s); clearTimeout(timer); }
-      window[cb]=function(d){ if(done) return; done=true; cleanup(); resolve(d); };
-      s.onerror=function(){ if(done) return; done=true; cleanup(); reject(new Error("JSONP network error")); };
-      s.src=full; document.head.appendChild(s);
-    });
-  }
-
-  /* === 4) 커스텀 셀렉트 라벨 동기화 === */
-  function syncCustomSelect(selectId){
-    const sel = $(selectId);
-    const wrap = document.querySelector(`.cselect[data-for="${selectId}"]`);
-    if(!sel || !wrap || !wrap.dataset.built) return; // CHANGED: 옵션 DOM이 이미 생성된 후에만 동기화
-    const btn  = wrap.querySelector('.cselect__btn');
-    const list = wrap.querySelector('.cselect__list');
-    const opt  = sel.selectedOptions && sel.selectedOptions[0];
-    if(btn && opt){
-      if(btn.firstChild) btn.firstChild.nodeValue = opt.textContent || '선택';
-      else btn.prepend(document.createTextNode(opt.textContent || '선택'));
-    }
-    if(list){
-      [...list.children].forEach(n=>{
-        const v = n.getAttribute('data-value');
-        n.setAttribute('aria-selected', String(v === sel.value));
-      });
-    }
-    sel.dispatchEvent(new Event('change'));
-  }
-
-  // ADDED: 커스텀 셀렉트 옵션 DOM 생성 및 이벤트 처리
-  function buildCustomSelect(selectId){
-    const sel  = document.getElementById(selectId);
-    const wrap = document.querySelector(`.cselect[data-for="${selectId}"]`);
-    if(!sel || !wrap) return;
-    const list = wrap.querySelector('.cselect__list');
-    const btn  = wrap.querySelector('.cselect__btn');
-    if(!list || !btn) return;
-
-    // 1) 옵션 DOM 생성(초기 1회)
-    if(!wrap.dataset.built){
-      Array.from(sel.options).forEach(opt=>{
-        const div = document.createElement('div');
-        div.className = 'cselect__option';
-        div.setAttribute('role','option');
-        div.setAttribute('data-value', opt.value);
-        div.textContent = opt.textContent || opt.value || '선택';
-        if(opt.value === sel.value) div.setAttribute('aria-selected','true');
-        else div.setAttribute('aria-selected','false');
-        list.appendChild(div);
-      });
-      wrap.dataset.built = '1';
-    }
-
-    // 2) 버튼 라벨 동기화 (syncCustomSelect의 로직을 build 후에 한 번 실행)
-    const cur = sel.selectedOptions && sel.selectedOptions[0];
-    btn.firstChild ? (btn.firstChild.nodeValue = cur ? cur.textContent : '선택')
-                   : btn.prepend(document.createTextNode(cur ? cur.textContent : '선택'));
-
-    // 3) 열기/닫기 토글
-    function closeList(){ list.classList.remove('is-open'); btn.setAttribute('aria-expanded','false'); }
-    btn.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      const willOpen = !list.classList.contains('is-open');
-      // 다른 열린 셀렉트 닫기
-      document.querySelectorAll('.cselect__list.is-open').forEach(x=>{
-        if(x !== list) x.classList.remove('is-open');
-      });
-      document.querySelectorAll('.cselect__btn[aria-expanded="true"]').forEach(x=>{
-        if(x !== btn) x.setAttribute('aria-expanded','false');
-      });
-
-      if(willOpen){ list.classList.add('is-open'); btn.setAttribute('aria-expanded','true'); }
-      else closeList();
-    });
-    document.addEventListener('click', (e)=>{
-      if(!wrap.contains(e.target)) closeList();
-    });
-
-    // 4) 옵션 클릭 → 값 반영
-    list.addEventListener('click', (e)=>{
-      const optDiv = e.target.closest('.cselect__option'); if(!optDiv) return;
-      const v = optDiv.getAttribute('data-value') || '';
-      sel.value = v;
-      syncCustomSelect(selectId); // 변경된 값으로 aria-selected, 버튼 라벨 등 갱신
-      closeList();
-    });
-
-    // 5) 키보드 접근성(간단 버전)
-    btn.addEventListener('keydown', (e)=>{
-      if(e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' '){
-        e.preventDefault(); list.classList.add('is-open'); btn.setAttribute('aria-expanded','true');
-        const selDiv = list.querySelector('.cselect__option[aria-selected="true"]') || list.firstElementChild;
-        selDiv && selDiv.scrollIntoView({block:'nearest'});
+  /**
+   * 1단계: 추출 작업 시작 요청
+   */
+  function startExtraction(url) {
+      // 기존 폴링이 있다면 중지
+      if (currentPollingInterval) {
+          clearInterval(currentPollingInterval);
+          currentPollingInterval = null;
       }
-    });
+
+      setMsg("⏳ AI로 분석 중입니다... (1/2: 작업 예약)", "#333");
+      
+      const extractUrl = ENDPOINT + 
+          `?action=extract&url=${encodeURIComponent(url)}`;
+      
+      // JSONP 방식으로 첫 요청 시작, 콜백은 handleStartResponse
+      loadJsonpScript(extractUrl, 'handleStartResponse'); // CHANGED: 콜백 함수명을 명시
   }
 
-  /* === 5) DOM 준비 === */
-  document.addEventListener('DOMContentLoaded', ()=>{
-    // Guard 배지가 있으면 포인터 가져오기(선택)
-    guardBadge = document.querySelector('body > div[style*="Guard"]') || null;
+  /**
+   * 1단계 응답 처리: Job ID를 받아 폴링 시작
+   */
+  window.handleStartResponse = function(response) { // CHANGED: 전역 함수로 선언
+      const payload = (response && typeof response === 'object' && 'data' in response) ? (response.data || {}) : (response || {});
 
-    // 세그먼트 토글 기본 바인딩(스몰웨딩/화환 등)
-    document.addEventListener('click', (e)=>{
-      const b = e.target.closest('.seg__btn'); if(!b) return;
-      const seg = b.closest('.seg'); const hiddenId = seg?.getAttribute('data-for');
-      const hidden = hiddenId ? $(hiddenId) : null;
-      seg.querySelectorAll('.seg__btn').forEach(x=>{ x.setAttribute('aria-pressed','false'); x.classList.remove('is-selected'); });
-      b.setAttribute('aria-pressed','true'); b.classList.add('is-selected');
-      if(hidden) hidden.value = b.dataset.value || '';
-    });
-
-    // 수기 입력 토글
-    (function(){
-      const noInviteEl = $('noInvite');
-      const block = $('inviteUrlBlock');
-      const btnCheck = $('btnCheck');
-      function updateInviteMode(){
-        const off = noInviteEl.checked;
-        block.classList.toggle('hidden', off);
-        btnCheck.classList.toggle('hidden', off);
-        if(off){ $('inviteUrl').value=''; }
+      if (payload && payload.jobId) {
+          const jobId = payload.jobId;
+          setMsg(`⏳ AI로 분석 중입니다... (2/2: 결과 확인 중 Job ID: ${jobId})`, "#333");
+          
+          // 2단계: 폴링 시작
+          pollForResults(jobId);
+      } else {
+          setMsg(`❌ 작업 예약 실패: ${payload.error || '응답 오류'}`, "red");
       }
-      noInviteEl.addEventListener('change', updateInviteMode);
-      updateInviteMode();
-    })();
+      delete window.handleStartResponse; // 사용 후 삭제 (선택)
+  }
 
-    // AI 버튼
-    $('btnCheck').addEventListener('click', async ()=>{
-      const msg = $('msg');
-      const url = ($('inviteUrl').value || '').trim();
-      if(!url){ msg.textContent="❌ 청첩장 URL을 입력하세요."; msg.style.color="red"; return; }
-      msg.textContent="⏳ AI로 분석 중입니다..."; msg.style.color="#333";
+  /**
+   * 2단계: 결과가 나올 때까지 주기적으로 상태를 확인합니다.
+   */
+  function pollForResults(jobId) {
+      const checkUrl = ENDPOINT + 
+          `?action=check&jobId=${jobId}`;
+      
+      // 폴링 간격 설정
+      const intervalId = setInterval(() => {
+          // JSONP 요청 시, 콜백 함수명을 handlePollResponse로 고정
+          loadJsonpScript(checkUrl, 'handlePollResponse'); 
+      }, POLLING_INTERVAL);
+      
+      currentPollingInterval = intervalId;
+  }
 
-      try{
-        const res = await jsonp(`${ENDPOINT}?action=extract&url=${encodeURIComponent(url)}`, 25000);
-        const payload = (res && typeof res === 'object' && 'data' in res) ? (res.data || {}) : (res || {});
-        console.log('[extract payload]', payload);
-        say && say('extract ok keys=' + (payload ? Object.keys(payload).length : 0));
+  /**
+   * 2단계 응답 처리: 상태 확인 및 최종 결과 표시
+   */
+  window.handlePollResponse = function(response) { // CHANGED: 전역 함수로 선언
+      const jobResult = response.data;
+      if (!jobResult) return; // 유효하지 않은 응답 무시
 
-        // 기본 인적/장소
-        $('groomFather').value = payload.groomFather || "";
-        $('groomMother').value = payload.groomMother || "";
-        $('groomOrder').value  = payload.groomOrder  || "";
-        $('groomName').value   = payload.groomName   || "";
-        $('brideFather').value = payload.brideFather || "";
-        $('brideMother').value = payload.brideMother || "";
-        $('brideOrder').value  = payload.brideOrder  || "";
-        $('brideName').value   = payload.brideName   || "";
+      // 상태 업데이트
+      setMsg(`... 작업 진행 중: ${jobResult.status}`, "#333");
 
-        // 형제관계 커스텀 셀렉트 라벨 재동기화
-        syncCustomSelect('groomOrder');
-        syncCustomSelect('brideOrder');
-
-        // 날짜/시간
-        const dateRaw = payload.eventDate || payload.date || "";
-        const timeRaw = payload.eventTime || payload.time || "";
-        const dtFromTime = extractDateAndTimeKR(timeRaw);
-        const dtFromDate = extractDateAndTimeKR(dateRaw);
-        const finalDate = dtFromTime.date || dtFromDate.date || dateRaw || "";
-        const finalTime = normalizeToHHMM(timeRaw) || dtFromTime.time || normalizeToHHMM(dtFromDate.time||"") || "";
-        setDateDisplay(finalDate);
-        setTimeDisplay(finalTime);
-
-        // 장소
-        $('venueAddr').value   = payload.venueAddr || "";
-        $('venueDetail').value = payload.venue       || payload.venueDetail || "";
-
-        // 연락처/계좌 제안 저장(Detail에서 사용)
-        const CONTACT_KEYS = ["groomPhone","bridePhone","groomFatherPhone","groomMotherPhone","brideFatherPhone","brideMotherPhone"];
-        const ACCOUNT_KEYS = ["groomBank","groomAccount","brideBank","brideAccount","groomFatherBank","groomFatherAccount","groomMotherBank","groomMotherAccount","brideFatherBank","brideFatherAccount","brideMotherBank","brideMotherAccount"];
-        const ai={}; CONTACT_KEYS.concat(ACCOUNT_KEYS).forEach((k)=>{ if(payload[k]) ai[k]=payload[k]; });
-        sessionStorage.setItem('ai-suggestions', JSON.stringify(ai));
-
-        msg.textContent="✅ 정보를 추출하여 필드에 자동 입력했습니다."; msg.style.color="#148914";
-
-      }catch(e){
-        console.error("AI check error", e);
-        msg.textContent="❌ 정보를 추출하는 데 실패했습니다. (Error: " + (e.message || 'Unknown') + ")"; msg.style.color="red";
+      // 작업이 완료되었거나 실패했을 때
+      if (jobResult.status === "complete" || jobResult.status === "failed") {
+          clearInterval(currentPollingInterval); // 폴링 중지
+          currentPollingInterval = null;
+          
+          // 최종 결과 처리 함수 호출
+          handleFinalResult(jobResult); 
+          delete window.handlePollResponse; // 사용 후 삭제
       }
-    });
+  }
 
-    // ADDED: 커스텀 셀렉트 초기화
-    buildCustomSelect('groomOrder');
-    buildCustomSelect('brideOrder');
+  /**
+   * 3단계: 최종 결과 데이터를 DOM에 반영
+   */
+  function handleFinalResult(jobResult) {
+      if (jobResult.status === "complete" && jobResult.ok) {
+          setMsg("✅ 정보를 추출하여 필드에 자동 입력했습니다.", "#148914");
+          
+          const payload = jobResult.data || {};
+          console.log('[extract payload]', payload);
+          say && say('extract ok keys=' + (payload.data ? Object.keys(payload.data).length : 0));
+          const data = payload.data || {}; // Apps Script에서 data: { ok: true, data: {...}} 형태로 반환
 
-  });
+          // --------------------------------------------------------
+          // 기존 코드의 데이터 반영 로직 (payload 대신 data 사용)
+          // --------------------------------------------------------
+          
+          // 기본 인적/장소
+          $('groomFather').value = data.groomFather || "";
+          $('groomMother').value = data.groomMother || "";
+          $('groomOrder').value  = data.groomOrder  || "";
+          $('groomName').value   = data.groomName   || "";
+          $('brideFather').value = data.brideFather || "";
+          $('brideMother').value = data.brideMother || "";
+          $('brideOrder').value  = data.brideOrder  || "";
+          $('brideName').value   = data.brideName   || "";
+
+          // 형제관계 커스텀 셀렉트 라벨 재동기화
+          syncCustomSelect('groomOrder');
+          syncCustomSelect('brideOrder');
+
+          // 날짜/시간
+          const dateRaw = data.eventDate || data.date || "";
+          const timeRaw = data.eventTime || data.time || "";
+          const dtFromTime = extractDateAndTimeKR(timeRaw);
+          const dtFromDate = extractDateAndTimeKR(dateRaw);
+          const finalDate = dtFromTime.date || dtFromDate.date || dateRaw || "";
+          const finalTime = normalizeToHHMM(timeRaw) || dtFromTime.time || normalizeToHHMM(dtFromDate.time||"") || "";
+          setDateDisplay(finalDate);
+          setTimeDisplay(finalTime);
+
+          // 장소
+          $('venueAddr').value   = data.venueAddr || "";
+          $('venueDetail').value = data.venue       || data.venueDetail || "";
+
+          // 연락처/계좌 제안 저장(Detail에서 사용)
+          const CONTACT_KEYS = ["groomPhone","bridePhone","groomFatherPhone","groomMotherPhone","brideFatherPhone","brideMotherPhone"];
+          const ACCOUNT_KEYS = ["groomBank","groomAccount","brideBank","brideAccount","groomFatherBank","groomFatherAccount","groomMotherBank","groomMotherAccount","brideFatherBank","brideFatherAccount","brideMotherBank","brideMotherAccount"];
+          const ai={}; CONTACT_KEYS.concat(ACCOUNT_KEYS).forEach((k)=>{ if(data[k]) ai[k]=data[k]; });
+          sessionStorage.setItem('ai-suggestions', JSON.stringify(ai));
+
+      } else {
+          setMsg("❌ 정보를 추출하는 데 실패했습니다. (Error: " + (jobResult.error || 'Unknown') + ")", "red");
+      }
+  }
+
+
+  /* === 5) 커스텀 셀렉트 라벨 동기화 (기존 로직 유지) === */
+  function syncCustomSelect(selectId){
+    const sel = $(selectId);
+    const wrap = document.querySelector(`.cselect[data-for="${selectId}"]`);
+    if(!sel || !wrap || !wrap.dataset.built) return;
+    const btn  = wrap.querySelector('.cselect__btn');
+    const list = wrap.querySelector('.cselect__list');
+    const opt  = sel.selectedOptions && sel.selectedOptions[0];
+    if(btn && opt){
+      if(btn.firstChild) btn.firstChild.nodeValue = opt.textContent || '선택';
+      else btn.prepend(document.createTextNode(opt.textContent || '선택'));
+    }
+    if(list){
+      [...list.children].forEach(n=>{
+        const v = n.getAttribute('data-value');
+        n.setAttribute('aria-selected', String(v === sel.value));
+      });
+    }
+    sel.dispatchEvent(new Event('change'));
+  }
+
+  // 커스텀 셀렉트 옵션 DOM 생성 및 이벤트 처리 (기존 로직 유지)
+  function buildCustomSelect(selectId){
+    const sel  = document.getElementById(selectId);
+    const wrap = document.querySelector(`.cselect[data-for="${selectId}"]`);
+    if(!sel || !wrap) return;
+    const list = wrap.querySelector('.cselect__list');
+    const btn  = wrap.querySelector('.cselect__btn');
+    if(!list || !btn) return;
+
+    // 1) 옵션 DOM 생성(초기 1회)
+    if(!wrap.dataset.built){
+      Array.from(sel.options).forEach(opt=>{
+        const div = document.createElement('div');
+        div.className = 'cselect__option';
+        div.setAttribute('role','option');
+        div.setAttribute('data-value', opt.value);
+        div.textContent = opt.textContent || opt.value || '선택';
+        if(opt.value === sel.value) div.setAttribute('aria-selected','true');
+        else div.setAttribute('aria-selected','false');
+        list.appendChild(div);
+      });
+      wrap.dataset.built = '1';
+    }
+
+    // 2) 버튼 라벨 동기화
+    const cur = sel.selectedOptions && sel.selectedOptions[0];
+    btn.firstChild ? (btn.firstChild.nodeValue = cur ? cur.textContent : '선택')
+                   : btn.prepend(document.createTextNode(cur ? cur.textContent : '선택'));
+
+    // 3) 열기/닫기 토글
+    function closeList(){ list.classList.remove('is-open'); btn.setAttribute('aria-expanded','false'); }
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const willOpen = !list.classList.contains('is-open');
+      // 다른 열린 셀렉트 닫기
+      document.querySelectorAll('.cselect__list.is-open').forEach(x=>{
+        if(x !== list) x.classList.remove('is-open');
+      });
+      document.querySelectorAll('.cselect__btn[aria-expanded="true"]').forEach(x=>{
+        if(x !== btn) x.setAttribute('aria-expanded','false');
+      });
+
+      if(willOpen){ list.classList.add('is-open'); btn.setAttribute('aria-expanded','true'); }
+      else closeList();
+    });
+    document.addEventListener('click', (e)=>{
+      if(!wrap.contains(e.target)) closeList();
+    });
+
+    // 4) 옵션 클릭 → 값 반영
+    list.addEventListener('click', (e)=>{
+      const optDiv = e.target.closest('.cselect__option'); if(!optDiv) return;
+      const v = optDiv.getAttribute('data-value') || '';
+      sel.value = v;
+      syncCustomSelect(selectId); // 변경된 값으로 aria-selected, 버튼 라벨 등 갱신
+      closeList();
+    });
+
+    // 5) 키보드 접근성(간단 버전)
+    btn.addEventListener('keydown', (e)=>{
+      if(e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' '){
+        e.preventDefault(); list.classList.add('is-open'); btn.setAttribute('aria-expanded','true');
+        const selDiv = list.querySelector('.cselect__option[aria-selected="true"]') || list.firstElementChild;
+        selDiv && selDiv.scrollIntoView({block:'nearest'});
+      }
+    });
+  }
+
+  /* === 6) DOM 준비 === */
+  document.addEventListener('DOMContentLoaded', ()=>{
+    // Guard 배지가 있으면 포인터 가져오기(선택)
+    guardBadge = document.querySelector('body > div[style*="Guard"]') || null;
+
+    // 세그먼트 토글 기본 바인딩(스몰웨딩/화환 등)
+    document.addEventListener('click', (e)=>{
+      const b = e.target.closest('.seg__btn'); if(!b) return;
+      const seg = b.closest('.seg'); const hiddenId = seg?.getAttribute('data-for');
+      const hidden = hiddenId ? $(hiddenId) : null;
+      seg.querySelectorAll('.seg__btn').forEach(x=>{ x.setAttribute('aria-pressed','false'); x.classList.remove('is-selected'); });
+      b.setAttribute('aria-pressed','true'); b.classList.add('is-selected');
+      if(hidden) hidden.value = b.dataset.value || '';
+    });
+
+    // 수기 입력 토글
+    (function(){
+      const noInviteEl = $('noInvite');
+      const block = $('inviteUrlBlock');
+      const btnCheck = $('btnCheck');
+      function updateInviteMode(){
+        const off = noInviteEl.checked;
+        block.classList.toggle('hidden', off);
+        btnCheck.classList.toggle('hidden', off);
+        if(off){ $('inviteUrl').value=''; }
+      }
+      noInviteEl.addEventListener('change', updateInviteMode);
+      updateInviteMode();
+    })();
+
+    // AI 버튼 클릭 리스너 (CHANGED)
+    $('btnCheck').addEventListener('click', async ()=>{
+      const url = ($('inviteUrl').value || '').trim();
+      if(!url){ setMsg("❌ 청첩장 URL을 입력하세요.", "red"); return; }
+      
+      // 🚨 비동기 추출 작업 시작!
+      startExtraction(url);
+    });
+
+    // ADDED: 커스텀 셀렉트 초기화
+    buildCustomSelect('groomOrder');
+    buildCustomSelect('brideOrder');
+
+  });
 
 })();
 </script>
