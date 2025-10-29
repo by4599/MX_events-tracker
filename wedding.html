@@ -77,12 +77,22 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 /* ================== 날짜/시간 표시 필드 ================== */
 .field{ position:relative; }
 .display-input{ padding-right:40px; cursor:pointer; background:#fff; }
+.field--flex1{ flex:1; } /* ADDED: flex:1 대체 */
 .display-input[aria-invalid="true"]{ border-color:#f33; box-shadow:0 0 0 3px rgba(255,51,51,.12); }
 .input-icon{
   position:absolute; right:12px; top:50%; transform:translateY(-50%);
   width:18px; height:18px; opacity:.9; pointer-events:none;
   background-size:contain; background-repeat:no-repeat; background-position:center;
 }
+/* ADDED: 아이콘 인라인 스타일 클래스화 */
+.input-icon.icon-calendar{
+  background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23111" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>');
+}
+.input-icon.icon-clock{
+  background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23111" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/></svg>');
+}
+/* ADDED: Firefox 스크롤 숨김 추가 */
+@supports (scrollbar-width: none){ .time-col{ scrollbar-width: none; } }
 
 /* ================== 모달(달력/시간 피커) 공통 ================== */
 .picker-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; z-index:1000; }
@@ -128,8 +138,9 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   border:1px solid #eee; border-radius:12px; background:#fafafa; padding:8px;
 }
 .time-col--ampm{ flex:.9; }
-.time-col::-webkit-scrollbar{ display:none; }
-.time-col{ scrollbar-width:none; -ms-overflow-style:none; }
+.time-col::-webkit-scrollbar{ display:none; } /* Chrome, Safari, Opera */
+.time-col{ -ms-overflow-style:none; } /* IE and Edge */ /* CHANGED: scrollbar-width: none 제거 */
+.date-picker-text{ padding:0 14px 12px; color:#111; font-weight:700; } /* ADDED: 인라인 스타일 대체 */
 .time-item{
   width:100%; padding:10px 0; margin:4px 0; border-radius:10px;
   cursor:pointer; text-align:center; border:1.5px solid transparent;
@@ -143,19 +154,18 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   position:absolute !important; width:1px; height:1px; padding:0; margin:-1px;
   overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
 }
+.sr-abs-left{ position:absolute !important; left:-9999px; } /* ADDED: 인라인 스타일 대체 */
 </style>
 </head>
 <body>
 <div class="card">
   <h2>결혼식 기본 정보 입력</h2>
 
-  <!-- 청첩장 URL -->
   <div id="inviteUrlBlock">
     <label for="inviteUrl">모바일 청첩장 URL</label>
     <input id="inviteUrl" type="url" placeholder="https://..." />
   </div>
 
-  <!-- 수기 입력 토글 -->
   <div class="toggle-wrapper">
     <span id="noInviteLabel">모바일 청첩장 없음 (수기 입력)</span>
     <label class="switch">
@@ -167,7 +177,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   <button class="btn primary" id="btnCheck">AI로 예식 정보 확인</button>
   <div id="msg" class="msg"></div>
 
-  <!-- 신랑측 -->
   <div class="section">
     <h3>신랑측</h3>
     <label for="groomFather">혼주 아버지 성함 *</label>
@@ -188,7 +197,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     <input id="groomName" type="text" />
   </div>
 
-  <!-- 신부측 -->
   <div class="section">
     <h3>신부측</h3>
     <label for="brideFather">혼주 아버지 성함 *</label>
@@ -209,26 +217,17 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     <input id="brideName" type="text" />
   </div>
 
-  <!-- 예식 정보 -->
   <div class="section">
     <h3>예식 정보</h3>
 
-    <!-- 저장용 hidden -->
     <input type="hidden" id="eventDate" />
     <input type="hidden" id="eventTime" />
 
-    <label>예식일시 *</label>
-    <div class="row">
-      <div class="field" style="flex:1;">
-        <input id="eventDateDisplay" class="display-input" type="text" placeholder="YYYY.MM.DD" readonly />
-        <span class="input-icon" aria-hidden="true"
-          style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23111%22 stroke-width=%221.6%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><rect x=%223%22 y=%224%22 width=%2218%22 height=%2217%22 rx=%222%22/><path d=%22M8 2v4M16 2v4M3 9h18%22/></svg>');"></span>
+    <label id="eventDateLabel">예식일시 *</label> <div class="row">
+      <div class="field field--flex1"> <input id="eventDateDisplay" class="display-input" type="text" placeholder="YYYY.MM.DD" readonly aria-labelledby="eventDateLabel" aria-required="true" /> <span class="input-icon icon-calendar" aria-hidden="true"></span>
       </div>
 
-      <div class="field" style="flex:1;">
-        <input id="eventTimeDisplay" class="display-input" type="text" placeholder="오전 12:30" readonly />
-        <span class="input-icon" aria-hidden="true"
-          style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23111%22 stroke-width=%221.6%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><circle cx=%2212%22 cy=%2212%22 r=%229%22/><path d=%22M12 7v6l4 2%22/></svg>');"></span>
+      <div class="field field--flex1"> <input id="eventTimeDisplay" class="display-input" type="text" placeholder="오전 12:30" readonly aria-labelledby="eventDateLabel" aria-required="true" /> <span class="input-icon icon-clock" aria-hidden="true"></span>
       </div>
     </div>
     <small class="hint">※ 해외의 경우 현지시간으로 입력 바랍니다.</small>
@@ -257,10 +256,8 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   <button class="btn primary" id="btnNext">추가 정보 입력</button>
 </div>
 
-<!-- ================== 오버레이 및 모달 ================== -->
 <div id="pickerBackdrop" class="picker-backdrop"></div>
 
-<!-- 날짜 피커 -->
 <div id="datePicker" class="picker" role="dialog" aria-modal="true" aria-label="날짜 선택">
   <div class="picker__hdr">
     <div class="cal-topline">
@@ -284,11 +281,8 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   </div>
   <input type="hidden" id="tempDate" />
   <input type="hidden" id="calYear" /><input type="hidden" id="calMonth" />
-  <div style="position:absolute; left:-9999px;" aria-live="polite" id="dateLive"></div>
-  <div style="padding:0 14px 12px; color:#111; font-weight:700;" id="dateSelectedText"></div>
-</div>
+  <div class="sr-abs-left" aria-live="polite" id="dateLive"></div> <div class="date-picker-text" id="dateSelectedText"></div> </div>
 
-<!-- 시간 피커 -->
 <div id="timePicker" class="picker" role="dialog" aria-modal="true" aria-label="시간 선택">
   <div class="picker__hdr">
     <div class="picker__title">시간 선택</div>
@@ -436,7 +430,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   function syncCustomSelect(selectId){
     const sel = $(selectId);
     const wrap = document.querySelector(`.cselect[data-for="${selectId}"]`);
-    if(!sel || !wrap) return;
+    if(!sel || !wrap || !wrap.dataset.built) return; // CHANGED: 옵션 DOM이 이미 생성된 후에만 동기화
     const btn  = wrap.querySelector('.cselect__btn');
     const list = wrap.querySelector('.cselect__list');
     const opt  = sel.selectedOptions && sel.selectedOptions[0];
@@ -451,6 +445,74 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
       });
     }
     sel.dispatchEvent(new Event('change'));
+  }
+
+  // ADDED: 커스텀 셀렉트 옵션 DOM 생성 및 이벤트 처리
+  function buildCustomSelect(selectId){
+    const sel  = document.getElementById(selectId);
+    const wrap = document.querySelector(`.cselect[data-for="${selectId}"]`);
+    if(!sel || !wrap) return;
+    const list = wrap.querySelector('.cselect__list');
+    const btn  = wrap.querySelector('.cselect__btn');
+    if(!list || !btn) return;
+
+    // 1) 옵션 DOM 생성(초기 1회)
+    if(!wrap.dataset.built){
+      Array.from(sel.options).forEach(opt=>{
+        const div = document.createElement('div');
+        div.className = 'cselect__option';
+        div.setAttribute('role','option');
+        div.setAttribute('data-value', opt.value);
+        div.textContent = opt.textContent || opt.value || '선택';
+        if(opt.value === sel.value) div.setAttribute('aria-selected','true');
+        else div.setAttribute('aria-selected','false');
+        list.appendChild(div);
+      });
+      wrap.dataset.built = '1';
+    }
+
+    // 2) 버튼 라벨 동기화 (syncCustomSelect의 로직을 build 후에 한 번 실행)
+    const cur = sel.selectedOptions && sel.selectedOptions[0];
+    btn.firstChild ? (btn.firstChild.nodeValue = cur ? cur.textContent : '선택')
+                   : btn.prepend(document.createTextNode(cur ? cur.textContent : '선택'));
+
+    // 3) 열기/닫기 토글
+    function closeList(){ list.classList.remove('is-open'); btn.setAttribute('aria-expanded','false'); }
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const willOpen = !list.classList.contains('is-open');
+      // 다른 열린 셀렉트 닫기
+      document.querySelectorAll('.cselect__list.is-open').forEach(x=>{
+        if(x !== list) x.classList.remove('is-open');
+      });
+      document.querySelectorAll('.cselect__btn[aria-expanded="true"]').forEach(x=>{
+        if(x !== btn) x.setAttribute('aria-expanded','false');
+      });
+
+      if(willOpen){ list.classList.add('is-open'); btn.setAttribute('aria-expanded','true'); }
+      else closeList();
+    });
+    document.addEventListener('click', (e)=>{
+      if(!wrap.contains(e.target)) closeList();
+    });
+
+    // 4) 옵션 클릭 → 값 반영
+    list.addEventListener('click', (e)=>{
+      const optDiv = e.target.closest('.cselect__option'); if(!optDiv) return;
+      const v = optDiv.getAttribute('data-value') || '';
+      sel.value = v;
+      syncCustomSelect(selectId); // 변경된 값으로 aria-selected, 버튼 라벨 등 갱신
+      closeList();
+    });
+
+    // 5) 키보드 접근성(간단 버전)
+    btn.addEventListener('keydown', (e)=>{
+      if(e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' '){
+        e.preventDefault(); list.classList.add('is-open'); btn.setAttribute('aria-expanded','true');
+        const selDiv = list.querySelector('.cselect__option[aria-selected="true"]') || list.firstElementChild;
+        selDiv && selDiv.scrollIntoView({block:'nearest'});
+      }
+    });
   }
 
   /* === 5) DOM 준비 === */
@@ -522,65 +584,28 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 
         // 장소
         $('venueAddr').value   = payload.venueAddr || "";
-        $('venueDetail').value = payload.venue     || payload.venueDetail || "";
+        $('venueDetail').value = payload.venue       || payload.venueDetail || "";
 
         // 연락처/계좌 제안 저장(Detail에서 사용)
         const CONTACT_KEYS = ["groomPhone","bridePhone","groomFatherPhone","groomMotherPhone","brideFatherPhone","brideMotherPhone"];
         const ACCOUNT_KEYS = ["groomBank","groomAccount","brideBank","brideAccount","groomFatherBank","groomFatherAccount","groomMotherBank","groomMotherAccount","brideFatherBank","brideFatherAccount","brideMotherBank","brideMotherAccount"];
-        const ai={}; CONTACT_KEYS.concat(ACCOUNT_KEYS).forEach(k=>{ if(payload[k]) ai[k]=String(payload[k]).trim(); });
-        localStorage.setItem('ai_suggestions', JSON.stringify(ai));
-        localStorage.setItem('inviteExtractRaw', JSON.stringify(payload));
+        const ai={}; CONTACT_KEYS.concat(ACCOUNT_KEYS).forEach((k)=>{ if(payload[k]) ai[k]=payload[k]; });
+        sessionStorage.setItem('ai-suggestions', JSON.stringify(ai));
 
-        // inviteInfo 저장(Detail 연계)
-        const info={
-          inviteUrl:url, noInvite:false,
-          groomFather:$('groomFather').value, groomMother:$('groomMother').value, groomOrder:$('groomOrder').value, groomName:$('groomName').value,
-          brideFather:$('brideFather').value, brideMother:$('brideMother').value, brideOrder:$('brideOrder').value, brideName:$('brideName').value,
-          eventDate:$('eventDate').value, eventTime:$('eventTime').value,
-          venueAddr:$('venueAddr').value, venueDetail:$('venueDetail').value
-        };
-        localStorage.setItem('inviteInfo', JSON.stringify(info));
+        msg.textContent="✅ 정보를 추출하여 필드에 자동 입력했습니다."; msg.style.color="#148914";
 
-        msg.textContent="✅ AI로 예식 정보가 입력되었습니다."; msg.style.color="green";
-      }catch(err){
-        console.error(err);
-        say && say('extract err');
-        msg.textContent = /timeout/i.test(String(err)) ? "❌ 타임아웃(25초). 다시 시도해주세요." : "❌ 분석 실패: " + (err?.message || err);
-        msg.style.color="red";
+      }catch(e){
+        console.error("AI check error", e);
+        msg.textContent="❌ 정보를 추출하는 데 실패했습니다. (Error: " + (e.message || 'Unknown') + ")"; msg.style.color="red";
       }
     });
 
-    // 다음 단계 버튼(기존 검증 로직 유지 가정)
-    $('btnNext').addEventListener('click', ()=>{
-      const required = ["groomFather","groomMother","groomOrder","groomName","brideFather","brideMother","brideOrder","brideName","eventDate","eventTime","venueAddr","venueDetail"];
-      for(const id of required){
-        const el = $(id);
-        if(!el || !String(el.value).trim()){
-          alert("❌ 필수 입력값이 누락되었습니다: " + id);
-          return;
-        }
-      }
-      const info={
-        inviteUrl:$('inviteUrl').value,
-        noInvite:$('noInvite').checked,
-        groomFather:$('groomFather').value,
-        groomMother:$('groomMother').value,
-        groomOrder:$('groomOrder').value,
-        groomName:$('groomName').value,
-        brideFather:$('brideFather').value,
-        brideMother:$('brideMother').value,
-        brideOrder:$('brideOrder').value,
-        brideName:$('brideName').value,
-        eventDate:$('eventDate').value,
-        eventTime:$('eventTime').value,
-        venueAddr:$('venueAddr').value,
-        venueDetail:$('venueDetail').value
-      };
-      localStorage.setItem('inviteInfo', JSON.stringify(info));
-      location.href='wedding_detail.html';
-    });
+    // ADDED: 커스텀 셀렉트 초기화
+    buildCustomSelect('groomOrder');
+    buildCustomSelect('brideOrder');
 
   });
+
 })();
 </script>
 </body>
