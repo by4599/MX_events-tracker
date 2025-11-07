@@ -309,8 +309,9 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   "use strict";
 
   /* === 0) 설정 === */
-  const ENDPOINT = "https://script.google.com/macros/s/AKfycbwsBf2tcQ_17Fpu_yDcEcn4uQDnZ0T8bU5L9KJtkgCCvXOsn5IfKEwVTP5_o7-fQmbvww/exec"; // ← 본인 exec URL
-  const POLLING_INTERVAL = 2000; // 2초마다 상태 확인 (비동기)
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycbylxBOnAjJSqmydH5GnLBexOsTo5G59Zpuj_B8JnoeqX4T8zwHvEVjzdEOu4C8E5Oh-Vg/exec"; // ← 본인 exec URL
+  
+  const POLLING_INTERVAL = 2000; // 2초마다 상태 확인 (비동기)
   let currentPollingInterval = null; // 폴링 타이머 ID 저장용
 
   /* === 1) DOM 헬퍼 === */
