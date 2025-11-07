@@ -310,15 +310,14 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 
   /* === 0) 설정 === */
   const ENDPOINT = "https://script.google.com/macros/s/AKfycbwsBf2tcQ_17Fpu_yDcEcn4uQDnZ0T8bU5L9KJtkgCCvXOsn5IfKEwVTP5_o7-fQmbvww/exec"; // ← 본인 exec URL
-  const POLLING_INTERVAL = 2000; // 🚨 2초마다 상태 확인 (비동기)
-  let currentPollingInterval = null; // 🚨 폴링 타이머 ID 저장용
+  const POLLING_INTERVAL = 2000; // 2초마다 상태 확인 (비동기)
+  let currentPollingInterval = null; // 폴링 타이머 ID 저장용
 
   /* === 1) DOM 헬퍼 === */
   const $ = (id)=>document.getElementById(id);
   let guardBadge = null;
   const say = (m)=>{ if(guardBadge) guardBadge.textContent = "Guard: " + m; };
-  const msgEl = $('msg'); // 메시지 엘리먼트 캐싱
-
+  
   function setMsg(text, color="red") {
     const el = $('msg');
     if (el) {
@@ -333,10 +332,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   function normalizeToHHMM(raw){
     if(!raw) return '';
     let s = String(raw).trim()
-      .replace(/\s+/g,' ')
-      .replace(/시/g,':')
-      .replace(/분/g,'')
-      .replace(/\.00\b/g,':00');
+      .replace(/\s+/g,' ').replace(/시/g,':').replace(/분/g,'').replace(/\.00\b/g,':00');
     if(/^\d{3,4}$/.test(s) && !s.includes(':')){
       const mm = s.slice(-2), hh = s.slice(0, s.length-2);
       s = `${hh}:${mm}`;
@@ -465,7 +461,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
           setMsg(`⏳ AI로 분석 중입니다... (2/2: 결과 확인 중 Job ID: ${jobId})`, "#333");
           pollForResults(jobId);
       } else {
-          // jobID 발급 실패 시 (Apps Script에서 작업 예약 오류 발생)
           setMsg(`❌ 작업 예약 실패: ${payload.error || '응답 오류'}`, "red");
       }
       delete window.handleStartResponse;
