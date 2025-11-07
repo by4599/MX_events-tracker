@@ -306,341 +306,169 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 
 <script>
 (function(){
-  "use strict";
+  "use strict";
 
-  /* === 0) 설정 === */
-  const ENDPOINT = "https://script.google.com/macros/s/AKfycbylxBOnAjJSqmydH5GnLBexOsTo5G59Zpuj_B8JnoeqX4T8zwHvEVjzdEOu4C8E5Oh-Vg/exec"; // ← 본인 exec URL
-  
-  const POLLING_INTERVAL = 2000; // 2초마다 상태 확인 (비동기)
-  let currentPollingInterval = null; // 폴링 타이머 ID 저장용
+  /* === 0) 설정 === */
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycbylxBOnAjJSqmydH5GnLBexOsTo5G59Zpuj_B8JnoeqX4T8zwHvEVjzdEOu4C8E5Oh-Vg/exec"; // Apps Script 웹앱 URL
 
-  /* === 1) DOM 헬퍼 === */
-  const $ = (id)=>document.getElementById(id);
-  let guardBadge = null;
-  const say = (m)=>{ if(guardBadge) guardBadge.textContent = "Guard: " + m; };
-  
-  function setMsg(text, color="red") {
-    const el = $('msg');
-    if (el) {
-      el.textContent = text;
-      el.style.color = color;
-    }
-  }
+  /* === 1) DOM 헬퍼 === */
+  const $ = (id)=>document.getElementById(id);
+  function setMsg(text, color="red") {
+    const el = $('msg');
+    if (el) { el.textContent = text; el.style.color = color; }
+  }
 
-  /* === 2) 날짜/시간 유틸 (기존 로직 유지) === */
-  const pad = (n)=>String(n).padStart(2,'0');
+  /* === 2) 시간/날짜 유틸 (기존 함수 사용하던 핵심만 유지) === */
+  const pad = (n)=>String(n).padStart(2,'0');
+  function normalizeToHHMM(raw){
+    if(!raw) return '';
+    let s = String(raw).trim()
+      .replace(/\s+/g,' ').replace(/시/g,':').replace(/분/g,'').replace(/\.00\b/g,':00');
+    if(/^\d{3,4}$/.test(s) && !s.includes(':')){
+      const mm = s.slice(-2), hh = s.slice(0, s.length-2);
+      s = `${hh}:${mm}`;
+    }
+    const hms = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    const ap  = s.match(/^(오전|오후|AM|PM|am|pm)\s*(\d{1,2})(?::|시)?\s*(\d{2})?$/);
+    if(ap){
+      const ampm = ap[1].toLowerCase();
+      let h12 = parseInt(ap[2],10);
+      const mm = ap[3] || '00';
+      if(ampm==='오전' || ampm==='am'){ if(h12===12) h12=0; } else { if(h12<12) h12+=12; }
+      return `${pad(h12)}:${mm}`;
+    }
+    if(hms){
+      let hh = parseInt(hms[1],10);
+      const mm = hms[2];
+      if(hh>24) hh = hh % 24;
+      return `${pad(hh)}:${mm}`;
+    }
+    return '';
+  }
+  function extractDateAndTimeKR(raw){
+    const out = { date:'', time:'' };
+    if(!raw) return out;
+    const s = String(raw).trim();
+    const re = /(?:(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일)?(?:\s*[일월화수목금토]요일)?(?:\s*(오전|오후|AM|PM|am|pm)?\s*(\d{1,2})(?:\s*시)?(?:\s*(\d{1,2})\s*분?)?)?/;
+    const m = s.match(re);
+    if(m){
+      const [, yy, mm, dd, ap, hStr, minStr] = m;
+      if(yy && mm && dd){ out.date = `${yy}-${pad(mm)}-${pad(dd)}`; }
+      if(hStr){
+        const mm2 = minStr?pad(minStr):'00';
+        if(ap){
+          let h = parseInt(hStr,10)||0;
+          const apLow = ap.toLowerCase();
+          if(apLow==='오전'||apLow==='am'){ if(h===12) h=0; } else { if(h<12) h+=12; }
+          out.time = `${pad(h)}:${mm2}`;
+        }else{
+          out.time = normalizeToHHMM(`${hStr}:${mm2}`);
+        }
+      }
+    }
+    if(!out.time){
+      const t = normalizeToHHMM(s);
+      if(t) out.time = t;
+    }
+    return out;
+  }
+  function to12h(h24){
+    const n = parseInt(h24,10);
+    if(isNaN(n)) return {ampm:'오전', h:'12'};
+    if(n===0) return {ampm:'오전', h:'12'};
+    if(n===12) return {ampm:'오후', h:'12'};
+    if(n>12) return {ampm:'오후', h:String(n-12).padStart(2,'0')};
+    return {ampm:'오전', h:String(n).padStart(2,'0')};
+  }
+  function setDateDisplay(iso){
+    const dateHidden = $('eventDate');
+    const dateDisplay = $('eventDateDisplay');
+    const pretty = (x)=> x ? x.split('-').join('.') : '';
+    dateHidden.value = iso || '';
+    dateDisplay.value = iso ? pretty(iso) : '';
+    dateDisplay.removeAttribute('aria-invalid');
+  }
+  function setTimeDisplay(v){
+    const timeHidden = $('eventTime');
+    const timeDisplay = $('eventTimeDisplay');
+    const norm = normalizeToHHMM(v);
+    if(norm){
+      timeHidden.value = norm;
+      const [hh,mm] = norm.split(':'); const t = to12h(hh);
+      timeDisplay.value = `${t.ampm} ${t.h}:${mm}`;
+      timeDisplay.removeAttribute('aria-invalid');
+    }else{
+      timeHidden.value = ''; timeDisplay.value = '';
+    }
+  }
 
-  function normalizeToHHMM(raw){
-    if(!raw) return '';
-    let s = String(raw).trim()
-      .replace(/\s+/g,' ').replace(/시/g,':').replace(/분/g,'').replace(/\.00\b/g,':00');
-    if(/^\d{3,4}$/.test(s) && !s.includes(':')){
-      const mm = s.slice(-2), hh = s.slice(0, s.length-2);
-      s = `${hh}:${mm}`;
-    }
-    const hms = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
-    const ap  = s.match(/^(오전|오후|AM|PM|am|pm)\s*(\d{1,2})(?::|시)?\s*(\d{2})?$/);
-    if(ap){
-      const ampm = ap[1].toLowerCase();
-      let h12 = parseInt(ap[2],10);
-      const mm = ap[3] || '00';
-      if(ampm==='오전' || ampm==='am'){ if(h12===12) h12=0; } else { if(h12<12) h12+=12; }
-      return `${pad(h12)}:${mm}`;
-    }
-    if(hms){
-      let hh = parseInt(hms[1],10);
-      const mm = hms[2];
-      if(hh>24) hh = hh % 24;
-      return `${pad(hh)}:${mm}`;
-    }
-    return '';
-  }
+  /* === 3) JSONP 유틸 (1회 호출) === */
+  function jsonp(url, cbName){
+    const s = document.createElement('script');
+    s.src = url + (url.includes('?')?'&':'?') + 'callback=' + cbName;
+    s.onerror = () => setMsg("❌ 네트워크 오류가 발생했습니다.");
+    document.head.appendChild(s);
+    // onload 시 스크립트 제거(메모리 정리)
+    s.onload = () => { if (s.parentNode) s.parentNode.removeChild(s); };
+  }
 
-  function extractDateAndTimeKR(raw){
-    const out = { date:'', time:'' };
-    if(!raw) return out;
-    const s = String(raw).trim();
-    const re = /(?:(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일)?(?:\s*[일월화수목금토]요일)?(?:\s*(오전|오후|AM|PM|am|pm)?\s*(\d{1,2})(?:\s*시)?(?:\s*(\d{1,2})\s*분?)?)?/;
-    const m = s.match(re);
-    if(m){
-      const [, yy, mm, dd, ap, hStr, minStr] = m;
-      if(yy && mm && dd){ out.date = `${yy}-${pad(mm)}-${pad(dd)}`; }
-      if(hStr){
-        const mm2 = minStr?pad(minStr):'00';
-        if(ap){
-          let h = parseInt(hStr,10)||0;
-          const apLow = ap.toLowerCase();
-          if(apLow==='오전'||apLow==='am'){ if(h===12) h=0; } else { if(h<12) h+=12; }
-          out.time = `${pad(h)}:${mm2}`;
-        }else{
-          out.time = normalizeToHHMM(`${hStr}:${mm2}`);
-        }
-      }
-    }
-    if(!out.time){
-      const t = normalizeToHHMM(s);
-      if(t) out.time = t;
-    }
-    return out;
-  }
+  /* === 4) 즉시 추출 === */
+  function requestExtractNow(url) {
+    setMsg("⏳ AI로 분석 중...", "#333");
+    const req = ENDPOINT + `?action=extract_now&url=${encodeURIComponent(url)}`;
+    jsonp(req, 'handleExtractNow');
+  }
 
-  function to12h(h24){
-    const n = parseInt(h24,10);
-    if(isNaN(n)) return {ampm:'오전', h:'12'};
-    if(n===0) return {ampm:'오전', h:'12'};
-    if(n===12) return {ampm:'오후', h:'12'};
-    if(n>12) return {ampm:'오후', h:String(n-12).padStart(2,'0')};
-    return {ampm:'오전', h:String(n).padStart(2,'0')};
-  }
+  window.handleExtractNow = function(response){
+    const payload = (response && response.data) ? response.data : response;
+    if (!payload) return setMsg("❌ 응답 형식이 올바르지 않습니다.");
+    if (payload.ok && payload.status === "complete") {
+      setMsg("✅ 정보를 추출하여 필드에 자동 입력했습니다.", "#148914");
+      const data = payload.data || {};
 
-  function setDateDisplay(iso){
-    const dateHidden = $('eventDate');
-    const dateDisplay = $('eventDateDisplay');
-    const pretty = (x)=> x ? x.split('-').join('.') : '';
-    dateHidden.value = iso || '';
-    dateDisplay.value = iso ? pretty(iso) : '';
-    dateDisplay.removeAttribute('aria-invalid');
-  }
+      $('groomFather').value = data.groomFather || "";
+      $('groomMother').value = data.groomMother || "";
+      $('groomOrder').value  = data.groomOrder  || "";
+      $('groomName').value   = data.groomName   || "";
+      $('brideFather').value = data.brideFather || "";
+      $('brideMother').value = data.brideMother || "";
+      $('brideOrder').value  = data.brideOrder  || "";
+      $('brideName').value   = data.brideName   || "";
 
-  function setTimeDisplay(v){
-    const timeHidden = $('eventTime');
-    const timeDisplay = $('eventTimeDisplay');
-    const norm = normalizeToHHMM(v);
-    if(norm){
-      timeHidden.value = norm;
-      const [hh,mm] = norm.split(':'); const t = to12h(hh);
-      timeDisplay.value = `${t.ampm} ${t.h}:${mm}`;
-      timeDisplay.removeAttribute('aria-invalid');
-    }else{
-      timeHidden.value = ''; timeDisplay.value = '';
-    }
-  }
-  
-  /* === 3) JSONP 요청 유틸리티 (폴링을 위해 재작성) === */
-  function loadJsonpScript(url, callbackName){
-    const cb = callbackName || "__cb__" + Math.random().toString(36).slice(2);
-    const s = document.createElement('script');
-    const full = url + (url.includes('?')?'&':'?') + "callback=" + cb;
-    
-    // 🚨 RangeError 해결: 콜백을 비동기(setTimeout)로 호출하여 스택 오버플로우 방지
-    window[cb]=function(d){ 
-      if(callbackName) setTimeout(() => window[callbackName](d), 0);
-      else { delete window[cb]; }
-    };
-    
-    s.onerror=function(){
-      if (currentPollingInterval) { 
-          clearInterval(currentPollingInterval); 
-          setMsg("❌ 네트워크 오류로 인해 추출 실패. 서버 상태를 확인하세요.");
-          currentPollingInterval = null;
-      }
-      if(s.parentNode) s.parentNode.removeChild(s);
-    };
-    s.onload = function() {
-        if(s.parentNode) s.parentNode.removeChild(s);
-    };
-    s.src=full; document.head.appendChild(s);
-    return cb;
-  }
+      // 날짜/시간
+      const dateRaw = data.eventDate || data.date || "";
+      const timeRaw = data.eventTime || data.time || "";
+      const dtFromTime = extractDateAndTimeKR(timeRaw);
+      const dtFromDate = extractDateAndTimeKR(dateRaw);
+      const finalDate = dtFromTime.date || dtFromDate.date || dateRaw || "";
+      const finalTime = normalizeToHHMM(timeRaw) || dtFromTime.time || normalizeToHHMM(dtFromDate.time||"") || "";
+      setDateDisplay(finalDate);
+      setTimeDisplay(finalTime);
 
-  /* === 4) 비동기 폴링 로직 (AI 추출) === */
-  function startExtraction(url) {
-      if (currentPollingInterval) {
-          clearInterval(currentPollingInterval);
-          currentPollingInterval = null;
-      }
-      setMsg("⏳ AI로 분석 중입니다... (1/2: 작업 예약)", "#333");
-      const extractUrl = ENDPOINT + `?action=extract&url=${encodeURIComponent(url)}`;
-      loadJsonpScript(extractUrl, 'handleStartResponse');
-  }
+      // 장소
+      $('venueAddr').value   = data.venueAddr || "";
+      $('venueDetail').value = data.venue     || data.venueDetail || "";
 
-  window.handleStartResponse = function(response) {
-      const payload = (response && typeof response === 'object' && 'data' in response)
-        ? (response.data || {}) : (response || {});
-      if (payload && payload.jobId) {
-          const jobId = payload.jobId;
-          setMsg(`⏳ AI로 분석 중입니다... (2/2: 결과 확인 중 Job ID: ${jobId})`, "#333");
-          pollForResults(jobId);
-      } else {
-          setMsg(`❌ 작업 예약 실패: ${payload.error || '응답 오류'}`, "red");
-      }
-      delete window.handleStartResponse;
-  }
+      // (선택) 연락처/계좌 제안 저장
+      const CONTACT_KEYS = ["groomPhone","bridePhone","groomFatherPhone","groomMotherPhone","brideFatherPhone","brideMotherPhone"];
+      const ACCOUNT_KEYS = ["groomBank","groomAccount","brideBank","brideAccount","groomFatherBank","groomFatherAccount","groomMotherBank","groomMotherAccount","brideFatherBank","brideFatherAccount","brideMotherBank","brideMotherAccount"];
+      const ai={}; CONTACT_KEYS.concat(ACCOUNT_KEYS).forEach((k)=>{ if(data[k]) ai[k]=data[k]; });
+      sessionStorage.setItem('ai-suggestions', JSON.stringify(ai));
+    } else {
+      setMsg("❌ 정보를 추출하는 데 실패했습니다. (Error: " + (payload.error || payload.status || 'Unknown') + ")", "red");
+    }
+    // 콜백 정리
+    try { delete window.handleExtractNow; } catch(_){}
+  };
 
-  function pollForResults(jobId) {
-      const checkUrl = ENDPOINT + `?action=check&jobId=${jobId}`;
-      const intervalId = setInterval(() => {
-          loadJsonpScript(checkUrl, 'handlePollResponse'); 
-      }, POLLING_INTERVAL);
-      currentPollingInterval = intervalId;
-  }
-
-  window.handlePollResponse = function(response) {
-      const jobResult = response.data;
-      if (!jobResult) return;
-      setMsg(`... 작업 진행 중: ${jobResult.status}`, "#333");
-      if (jobResult.status === "complete" || jobResult.status === "failed") {
-          clearInterval(currentPollingInterval);
-          currentPollingInterval = null;
-          handleFinalResult(jobResult);
-          delete window.handlePollResponse;
-      }
-  }
-
-  function handleFinalResult(jobResult) {
-      if (jobResult.status === "complete" && jobResult.ok) {
-          setMsg("✅ 정보를 추출하여 필드에 자동 입력했습니다.", "#148914");
-          const payload = jobResult.data || {};
-          console.log('[extract payload]', payload);
-          const data = payload.data || {};
-
-          $('groomFather').value = data.groomFather || "";
-          $('groomMother').value = data.groomMother || "";
-          $('groomOrder').value  = data.groomOrder  || "";
-          $('groomName').value   = data.groomName   || "";
-          $('brideFather').value = data.brideFather || "";
-          $('brideMother').value = data.brideMother || "";
-          $('brideOrder').value  = data.brideOrder  || "";
-          $('brideName').value   = data.brideName   || "";
-
-          syncCustomSelect('groomOrder');
-          syncCustomSelect('brideOrder');
-
-          const dateRaw = data.eventDate || data.date || "";
-          const timeRaw = data.eventTime || data.time || "";
-          const dtFromTime = extractDateAndTimeKR(timeRaw);
-          const dtFromDate = extractDateAndTimeKR(dateRaw);
-          const finalDate = dtFromTime.date || dtFromDate.date || dateRaw || "";
-          const finalTime = normalizeToHHMM(timeRaw) || dtFromTime.time || normalizeToHHMM(dtFromDate.time||"") || "";
-          setDateDisplay(finalDate);
-          setTimeDisplay(finalTime);
-
-          $('venueAddr').value   = data.venueAddr || "";
-          $('venueDetail').value = data.venue       || data.venueDetail || "";
-
-          const CONTACT_KEYS = ["groomPhone","bridePhone","groomFatherPhone","groomMotherPhone","brideFatherPhone","brideMotherPhone"];
-          const ACCOUNT_KEYS = ["groomBank","groomAccount","brideBank","brideAccount","groomFatherBank","groomFatherAccount","groomMotherBank","groomMotherAccount","brideFatherBank","brideFatherAccount","brideMotherBank","brideMotherAccount"];
-          const ai={}; CONTACT_KEYS.concat(ACCOUNT_KEYS).forEach((k)=>{ if(data[k]) ai[k]=data[k]; });
-          sessionStorage.setItem('ai-suggestions', JSON.stringify(ai));
-
-      } else {
-          setMsg("❌ 정보를 추출하는 데 실패했습니다. (Error: " + (jobResult.error || 'Unknown') + ")", "red");
-      }
-  }
-
-  /* === 5) 커스텀 셀렉트 === */
-  function syncCustomSelect(selectId){
-    const sel = $(selectId);
-    const wrap = document.querySelector(`.cselect[data-for="${selectId}"]`);
-    if(!sel || !wrap || !wrap.dataset.built) return;
-    const btn  = wrap.querySelector('.cselect__btn');
-    const list = wrap.querySelector('.cselect__list');
-    const opt  = sel.selectedOptions && sel.selectedOptions[0];
-    if(btn && opt){
-      if(btn.firstChild) btn.firstChild.nodeValue = opt.textContent || '선택';
-      else btn.prepend(document.createTextNode(opt.textContent || '선택'));
-    }
-    if(list){
-      [...list.children].forEach(n=>{
-        const v = n.getAttribute('data-value');
-        n.setAttribute('aria-selected', String(v === sel.value));
-      });
-    }
-    sel.dispatchEvent(new Event('change'));
-  }
-
-  function buildCustomSelect(selectId){
-    const sel  = document.getElementById(selectId);
-    const wrap = document.querySelector(`.cselect[data-for="${selectId}"]`);
-    if(!sel || !wrap) return;
-    const list = wrap.querySelector('.cselect__list');
-    const btn  = wrap.querySelector('.cselect__btn');
-    if(!list || !btn) return;
-    if(!wrap.dataset.built){
-      Array.from(sel.options).forEach(opt=>{
-        const div = document.createElement('div');
-        div.className = 'cselect__option';
-        div.setAttribute('role','option');
-        div.setAttribute('data-value', opt.value);
-        div.textContent = opt.textContent || opt.value || '선택';
-        if(opt.value === sel.value) div.setAttribute('aria-selected','true');
-        else div.setAttribute('aria-selected','false');
-        list.appendChild(div);
-      });
-      wrap.dataset.built = '1';
-    }
-    const cur = sel.selectedOptions && sel.selectedOptions[0];
-    btn.firstChild ? (btn.firstChild.nodeValue = cur ? cur.textContent : '선택')
-                   : btn.prepend(document.createTextNode(cur ? cur.textContent : '선택'));
-    function closeList(){ list.classList.remove('is-open'); btn.setAttribute('aria-expanded','false'); }
-    btn.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      const willOpen = !list.classList.contains('is-open');
-      document.querySelectorAll('.cselect__list.is-open').forEach(x=>{
-        if(x !== list) x.classList.remove('is-open');
-      });
-      document.querySelectorAll('.cselect__btn[aria-expanded="true"]').forEach(x=>{
-        if(x !== btn) x.setAttribute('aria-expanded','false');
-      });
-      if(willOpen){ list.classList.add('is-open'); btn.setAttribute('aria-expanded','true'); }
-      else closeList();
-    });
-    document.addEventListener('click', (e)=>{
-      if(!wrap.contains(e.target)) closeList();
-    });
-    list.addEventListener('click', (e)=>{
-      const optDiv = e.target.closest('.cselect__option'); if(!optDiv) return;
-      const v = optDiv.getAttribute('data-value') || '';
-      sel.value = v;
-      syncCustomSelect(selectId);
-      closeList();
-    });
-    btn.addEventListener('keydown', (e)=>{
-      if(e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' '){
-        e.preventDefault(); list.classList.add('is-open'); btn.setAttribute('aria-expanded','true');
-        const selDiv = list.querySelector('.cselect__option[aria-selected="true"]') || list.firstElementChild;
-        selDiv && selDiv.scrollIntoView({block:'nearest'});
-      }
-    });
-  }
-
-  /* === 6) DOM 준비 === */
-  document.addEventListener('DOMContentLoaded', ()=>{
-    guardBadge = document.querySelector('body > div[style*="Guard"]') || null;
-
-    document.addEventListener('click', (e)=>{
-      const b = e.target.closest('.seg__btn'); if(!b) return;
-      const seg = b.closest('.seg'); const hiddenId = seg?.getAttribute('data-for');
-      const hidden = hiddenId ? $(hiddenId) : null;
-      seg.querySelectorAll('.seg__btn').forEach(x=>{ x.setAttribute('aria-pressed','false'); x.classList.remove('is-selected'); });
-      b.setAttribute('aria-pressed','true'); b.classList.add('is-selected');
-      if(hidden) hidden.value = b.dataset.value || '';
-    });
-
-    (function(){
-      const noInviteEl = $('noInvite');
-      const block = $('inviteUrlBlock');
-      const btnCheck = $('btnCheck');
-      function updateInviteMode(){
-        const off = noInviteEl.checked;
-        block.classList.toggle('hidden', off);
-        btnCheck.classList.toggle('hidden', off);
-        if(off){ $('inviteUrl').value=''; }
-      }
-      noInviteEl.addEventListener('change', updateInviteMode);
-      updateInviteMode();
-    })();
-
-    $('btnCheck').addEventListener('click', async ()=>{
-      const url = ($('inviteUrl').value || '').trim();
-      if(!url){ setMsg("❌ 청첩장 URL을 입력하세요.", "red"); return; }
-      startExtraction(url);
-    });
-
-    buildCustomSelect('groomOrder');
-    buildCustomSelect('brideOrder');
-  });
-
+  /* === 5) DOM 준비 === */
+  document.addEventListener('DOMContentLoaded', ()=>{
+    $('btnCheck').addEventListener('click', ()=>{
+      const url = ($('inviteUrl').value || '').trim();
+      if(!url){ setMsg("❌ 청첩장 URL을 입력하세요.", "red"); return; }
+      requestExtractNow(url);
+    });
+  });
 })();
 </script>
 </body>
