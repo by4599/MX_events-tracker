@@ -432,12 +432,13 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
       setMsg('❌ 예약 실패: ' + e.message, 'red');
       return;
     }
-    const jobId = resp && resp.data && resp.data.jobId;
+    const jobId = (resp && resp.data && resp.data.jobId) || (resp && resp.jobId) || "";
     if (!jobId) {
       setMsg('❌ 예약 응답 형식 오류', 'red');
       return;
     }
-    setMsg('🔎 1차 필드 채움 중... (결과 대기)', '#333');
+    seconst status = (resp && resp.data && resp.data.status) || resp.status || "scheduled";tMsg('🔎 1차 필드 채움 중... (결과 대기)', '#333');
+    setMsg(`🔎 예약 완료(${status}) → 결과 대기 중...`, '#333');
     pollJob(jobId);
   }
 
