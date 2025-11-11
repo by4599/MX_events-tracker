@@ -383,8 +383,30 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     document.head.appendChild(s);
     s.onload = () => { if (s.parentNode) s.parentNode.removeChild(s); };
   }
+  function jsonpOnce(url, handler){
+    const cbName = 'cb_' + Math.random().toString(36).slice(2);
+    window[cbName] = function(resp){
+      try { handler(resp); }
+      finally { try { delete window[cbName]; } catch(_){} }
+    };
+    jsonp(url, cbName);
+  }
 
-  /* === 4) 즉시 추출 === */
+  /* === 4) QueryString === */
+  function getParam(name){
+    const u = new URL(location.href);
+    return u.searchParams.get(name);
+  }
+
+  /* === 5) LS 키 === */
+  const LS_KEYS = {
+    inviteUrl: 'wedding:inviteUrl',
+    phase1:    'wedding:phase1',
+    jobId:     'wedding:contactsJobId',
+    ai:        'wedding:ai-suggestions'
+  };
+
+  /* === 6) 1차 즉시 추출 === */
   function requestExtractNow(url) {
     setMsg("⏳ AI로 분석 중...", "#333");
     const req = ENDPOINT + `?action=extract_now&url=${encodeURIComponent(url)}`;
@@ -395,10 +417,8 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   window.handleExtractNow = function(resp){
     let payload;
     if (resp && typeof resp.ok !== 'undefined') {
-      // 형태 A: { ok, source, data, error }
       payload = { ok: !!resp.ok, status: resp.status || (resp.ok ? 'complete' : 'failed'), data: resp.data || {}, error: resp.error || '' };
     } else if (resp && resp.data) {
-      // 형태 B: { data: { ok, status, url, source, data, error } }
       payload = resp.data;
     }
     if (!payload) return setMsg("❌ 응답 형식이 올바르지 않습니다.");
@@ -424,18 +444,60 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
       $('venueAddr').value   = data.venueAddr || "";
       $('venueDetail').value = data.venue     || data.venueDetail || "";
 
-      // 연락처/계좌 제안(세션에 저장 → 다음 단계에서 활용 가능)
+      // 연락처/계좌 제안 → 세션/로컬 저장
       const CONTACT_KEYS = ["groomPhone","bridePhone","groomFatherPhone","groomMotherPhone","brideFatherPhone","brideMotherPhone"];
       const ACCOUNT_KEYS = ["groomBank","groomAccount","brideBank","brideAccount","groomFatherBank","groomFatherAccount","groomMotherBank","groomMotherAccount","brideFatherBank","brideFatherAccount","brideMotherBank","brideMotherAccount"];
       const ai={}; CONTACT_KEYS.concat(ACCOUNT_KEYS).forEach((k)=>{ if(data[k]) ai[k]=data[k]; });
-      try { sessionStorage.setItem('ai-suggestions', JSON.stringify(ai)); } catch(_) {}
+      try { sessionStorage.setItem('ai-suggestions', JSON.stringify(ai)); } catch(_){}
+      try { localStorage.setItem(LS_KEYS.ai, JSON.stringify(ai)); } catch(_){}
+
+      // 현재 URL 저장 + 1차 스냅샷 저장
+      const curUrl = ($('inviteUrl').value || '').trim();
+      if (curUrl) { try { localStorage.setItem(LS_KEYS.inviteUrl, curUrl); } catch(_){} }
+      const phase1 = {
+        groomFather: $('groomFather').value,
+        groomMother: $('groomMother').value,
+        groomOrder : $('groomOrder').value,
+        groomName  : $('groomName').value,
+        brideFather: $('brideFather').value,
+        brideMother: $('brideMother').value,
+        brideOrder : $('brideOrder').value,
+        brideName  : $('brideName').value,
+        eventDate  : $('eventDate').value,
+        eventTime  : $('eventTime').value,
+        venueAddr  : $('venueAddr').value,
+        venueDetail: $('venueDetail').value
+      };
+      try { localStorage.setItem(LS_KEYS.phase1, JSON.stringify(phase1)); } catch(_){}
+
+      // 2차 Job 예약 (이미 없으면)
+      try {
+        const exists = localStorage.getItem(LS_KEYS.jobId);
+        if (!exists && curUrl) startContactsJob(curUrl);
+      } catch(_){}
     } else {
       setMsg("❌ 정보를 추출하는 데 실패했습니다. (Error: " + (payload.error || payload.status || 'Unknown') + ")", "red");
     }
     try { delete window.handleExtractNow; } catch(_){}
   };
 
-  /* === 5) 모달(달력/시간) 제어 === */
+  /* === 7) 2차(연락처/계좌) Job 예약 === */
+  // code.gs의 비동기 액션 이름이 'extract' / 'check' 인 경우에 맞춤
+  function startContactsJob(inviteUrl){
+    const req = ENDPOINT + `?action=extract&url=${encodeURIComponent(inviteUrl)}`;
+    jsonpOnce(req, function(resp){
+      let jobId = '';
+      if (resp && resp.data && resp.data.jobId) jobId = resp.data.jobId;
+      else if (resp && resp.jobId) jobId = resp.jobId;
+      if (jobId){
+        try { localStorage.setItem(LS_KEYS.jobId, jobId); } catch(_){}
+      } else {
+        console.warn('contacts job scheduling failed:', resp);
+      }
+    });
+  }
+
+  /* === 8) 모달(달력/시간) === */
   const backdrop = $('pickerBackdrop');
   const datePicker = $('datePicker');
   const timePicker = $('timePicker');
@@ -443,7 +505,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   function openModal(el){ backdrop.style.display='block'; el.style.display='block'; }
   function closeModal(el){ el.style.display='none'; backdrop.style.display='none'; }
 
-  // 캘린더 구성
   function buildCalendar(year, month){ // month: 0~11
     $('calYear').value = year;
     $('calMonth').value = month;
@@ -452,17 +513,15 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     grid.innerHTML = '';
 
     const first = new Date(year, month, 1);
-    const startDay = first.getDay(); // 0:일
+    const startDay = first.getDay();
     const last = new Date(year, month+1, 0).getDate();
 
-    // 빈칸
     for (let i=0;i<startDay;i++){
       const d = document.createElement('div');
       d.className = 'cal-day out';
       d.textContent = '';
       grid.appendChild(d);
     }
-    // 날짜
     const todayIso = new Date().toISOString().slice(0,10);
     const selIso = $('tempDate').value || $('eventDate').value || '';
     for (let day=1; day<=last; day++){
@@ -486,7 +545,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     }
   }
 
-  // 시간 컬럼 구성
   function buildTimeColumns(){
     const ampmCol = $('ampmCol'), hourCol = $('hourCol'), minCol = $('minCol');
     ampmCol.innerHTML=''; hourCol.innerHTML=''; minCol.innerHTML='';
@@ -514,7 +572,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
       minCol.appendChild(makeItem(m, (t)=>{ $('tempMin').value = t; }));
     });
 
-    // 기존 값 반영(있으면 초기 선택)
     const cur = $('eventTime').value; // HH:MM
     if (cur){
       const [HH,MM] = cur.split(':');
@@ -525,7 +582,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
       Array.from(hourCol.children).forEach(el=>{ if(el.textContent===h) el.classList.add('sel'); });
       Array.from(minCol.children).forEach(el=>{ if(el.textContent===MM) el.classList.add('sel'); });
     } else {
-      // 기본값: 오전 12:00
       ampmCol.dataset.value = '오전';
       ampmCol.children[0].classList.add('sel');
       $('tempHour').value = '12'; $('tempMin').value = '00';
@@ -534,14 +590,13 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     }
   }
 
-  /* === 6) 커스텀 셀렉트 === */
+  /* === 9) 커스텀 셀렉트 === */
   function initCustomSelect(wrapper){
     const targetId = wrapper.getAttribute('data-for');
     const select = $(targetId);
     const btn = wrapper.querySelector('.cselect__btn');
     const list = wrapper.querySelector('.cselect__list');
 
-    // 옵션 렌더
     function render(){
       list.innerHTML = '';
       Array.from(select.options).forEach(opt=>{
@@ -554,13 +609,11 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
           select.value = opt.value;
           btn.firstChild.textContent = opt.textContent;
           list.classList.remove('is-open');
-          // 선택상태 갱신
           Array.from(list.children).forEach(n=>n.removeAttribute('aria-selected'));
           item.setAttribute('aria-selected','true');
         });
         list.appendChild(item);
       });
-      // 버튼 라벨 초기화
       const cur = select.options[select.selectedIndex];
       btn.firstChild.textContent = (cur ? cur.textContent : '선택');
     }
@@ -578,7 +631,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     });
   }
 
-  /* === 7) 세그먼트 버튼 === */
+  /* === 10) 세그먼트 버튼 === */
   function initSegment(groupEl){
     const targetId = groupEl.getAttribute('data-for');
     const hidden = $(targetId);
@@ -595,9 +648,22 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     });
   }
 
-  /* === 8) 초기 바인딩 === */
+  /* === 11) 초기 바인딩 === */
   document.addEventListener('DOMContentLoaded', ()=>{
-    // AI 추출
+    // URL 파라미터로 들어온 경우 자동 세팅/분석/예약
+    const qsUrl = getParam('url');
+    if (qsUrl) {
+      $('inviteUrl').value = qsUrl;
+      try { localStorage.setItem(LS_KEYS.inviteUrl, qsUrl); } catch(_){}
+      requestExtractNow(qsUrl);
+      startContactsJob(qsUrl);
+    } else {
+      // 저장된 대상 URL 복원(편의)
+      const saved = localStorage.getItem(LS_KEYS.inviteUrl) || '';
+      if (saved && !$('inviteUrl').value) $('inviteUrl').value = saved;
+    }
+
+    // AI 추출 트리거
     $('btnCheck').addEventListener('click', ()=>{
       const url = ($('inviteUrl').value || '').trim();
       if(!url){ setMsg("❌ 청첩장 URL을 입력하세요.", "red"); return; }
@@ -619,7 +685,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 
     // 날짜 모달 열기
     $('eventDateDisplay').addEventListener('click', ()=>{
-      // 현재 혹은 기존 선택 기준 월 표시
       let base = $('eventDate').value || new Date().toISOString().slice(0,10);
       let [y,m] = base.split('-');
       buildCalendar(parseInt(y,10), parseInt(m,10)-1);
@@ -673,14 +738,41 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 
     // 다음 단계(추가정보) 버튼
     $('btnNext').addEventListener('click', ()=>{
-      // 간단 유효성만 체크
       if (!$('eventDate').value) { $('eventDateDisplay').setAttribute('aria-invalid','true'); setMsg("예식일을 선택하세요.", "red"); return; }
       if (!$('eventTime').value) { $('eventTimeDisplay').setAttribute('aria-invalid','true'); setMsg("예식 시간을 선택하세요.", "red"); return; }
       if (!$('venueAddr').value) { setMsg("예식장 주소를 입력/선택하세요.", "red"); return; }
       if (!$('isSmallWeddingInput').value) { setMsg("스몰웨딩 여부를 선택하세요.", "red"); return; }
       if (!$('flowerInput').value) { setMsg("화환 수령 여부를 선택하세요.", "red"); return; }
-      setMsg("✅ 다음 단계로 진행할 수 있습니다.", "#148914");
-      // 여기서 location.href = 'next.html' 등으로 이동 가능
+
+      // 이동 전, 최종 저장(수동수정 반영)
+      const phase1 = {
+        groomFather: $('groomFather').value,
+        groomMother: $('groomMother').value,
+        groomOrder : $('groomOrder').value,
+        groomName  : $('groomName').value,
+        brideFather: $('brideFather').value,
+        brideMother: $('brideMother').value,
+        brideOrder : $('brideOrder').value,
+        brideName  : $('brideName').value,
+        eventDate  : $('eventDate').value,
+        eventTime  : $('eventTime').value,
+        venueAddr  : $('venueAddr').value,
+        venueDetail: $('venueDetail').value,
+        isSmall    : $('isSmallWeddingInput').value,
+        flower     : $('flowerInput').value
+      };
+      try { localStorage.setItem(LS_KEYS.phase1, JSON.stringify(phase1)); } catch(_){}
+      const curUrl = ($('inviteUrl').value || '').trim();
+      if (curUrl) { try { localStorage.setItem(LS_KEYS.inviteUrl, curUrl); } catch(_){ } }
+
+      // 2차 Job이 없다면 지금 예약
+      try {
+        const exists = localStorage.getItem(LS_KEYS.jobId);
+        if (!exists && curUrl) startContactsJob(curUrl);
+      } catch(_){}
+
+      setMsg("✅ 다음 단계로 이동합니다.", "#148914");
+      location.href = 'Wedding_detail.html?from=phase1';
     });
   });
 })();
