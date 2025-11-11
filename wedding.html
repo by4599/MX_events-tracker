@@ -309,7 +309,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   "use strict";
 
   /* ================== 0) 설정 ================== */
-  // ★★★ 최신 GAS 배포 URL(Manage deployments → Web app → URL)로 교체 ★★★
+  // ★ 최신 GAS 배포 URL(Manage deployments → Web app → URL)
   const ENDPOINT = "https://script.google.com/macros/s/AKfycbylxBOnAjJSqmydH5GnLBexOsTo5G59Zpuj_B8JnoeqX4T8zwHvEVjzdEOu4C8E5Oh-Vg/exec";
 
   /* ================== 1) DOM/메시지 헬퍼 ================== */
@@ -317,6 +317,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   function setMsg(text, color="#333") {
     const el = $('msg');
     if (el) { el.textContent = text; el.style.color = color; }
+    console.log("[UI MSG]", text);
   }
   const pad = (n)=>String(n).padStart(2,'0');
 
@@ -413,10 +414,12 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     jsonpPromise(req).then((resp) => {
       if (switched) return;
       clearTimeout(watchdog);
+      console.log("[extract_now] resp:", resp);
       handleExtractNow(resp);
-    }).catch(() => {
+    }).catch((e) => {
       if (switched) return;
       clearTimeout(watchdog);
+      console.warn("[extract_now] error:", e);
       startAsyncExtract(url);
     });
   }
@@ -428,6 +431,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     let resp;
     try {
       resp = await jsonpPromise(kick);
+      console.log("[extract(schedule)] resp:", resp);
     } catch (e) {
       setMsg('❌ 예약 실패: ' + e.message, 'red');
       return;
@@ -437,7 +441,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
       setMsg('❌ 예약 응답 형식 오류', 'red');
       return;
     }
-    const status = (resp && resp.data && resp.data.status) || resp.status || "scheduled";tMsg('🔎 1차 필드 채움 중... (결과 대기)', '#333');
+    const status = (resp && resp.data && resp.data.status) || resp.status || "scheduled";
     setMsg(`🔎 예약 완료(${status}) → 결과 대기 중...`, '#333');
     pollJob(jobId);
   }
@@ -448,7 +452,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     const tick = async () => {
       const chk = `${ENDPOINT}?action=check&jobId=${encodeURIComponent(jobId)}`;
       let res;
-      try { res = await jsonpPromise(chk); } catch {}
+      try { res = await jsonpPromise(chk); console.log("[check]", res); } catch(e){ console.warn("[check] error", e); }
       const payload = res && res.data;
       if (payload && payload.status === 'complete' && payload.ok) {
         setMsg('✅ 분석 완료! 필드에 반영했습니다.', '#148914');
@@ -487,13 +491,13 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     $('venueAddr').value   = data.venueAddr || "";
     $('venueDetail').value = data.venue     || data.venueDetail || "";
 
-    // 2차에서 쓸 제안 저장(localStorage: ai_suggestions)
+    // 2차 제안 저장
     const CONTACT_KEYS = ["groomPhone","bridePhone","groomFatherPhone","groomMotherPhone","brideFatherPhone","brideMotherPhone"];
     const ACCOUNT_KEYS = ["groomBank","groomAccount","brideBank","brideAccount","groomFatherBank","groomFatherAccount","groomMotherBank","groomMotherAccount","brideFatherBank","brideFatherAccount","brideMotherBank","brideMotherAccount"];
     const ai = {};
     CONTACT_KEYS.concat(ACCOUNT_KEYS).forEach((k)=>{ if(data[k]) ai[k]=data[k]; });
     try { localStorage.setItem('ai_suggestions', JSON.stringify(ai)); } catch(_){}
-    // 1차 기본 정보 전체 저장(localStorage: inviteInfo)
+    // 1차 기본 정보 저장
     const inviteInfo = {
       groomFather: $('groomFather').value,
       groomMother: $('groomMother').value,
@@ -784,7 +788,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
       if (!$('isSmallWeddingInput').value) { setMsg("스몰웨딩 여부를 선택하세요.", "red"); return; }
       if (!$('flowerInput').value) { setMsg("화환 수령 여부를 선택하세요.", "red"); return; }
 
-      // 저장(혹시 수정됐을 수 있으니 다시 저장)
       const inviteInfo = {
         groomFather: $('groomFather').value,
         groomMother: $('groomMother').value,
@@ -802,14 +805,13 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
       try { localStorage.setItem('inviteInfo', JSON.stringify(inviteInfo)); } catch(_){}
 
       setMsg("✅ 다음 단계로 진행할 수 있습니다.", "#148914");
-      // 실제 이동
       location.href = './wedding_detail.html';
     });
   });
 
-  /* ================== 11) 개발 중 핑(선택) ================== */
-  // fetch(ENDPOINT + '?action=ping&callback=cb').then(r=>r.text()).then(console.log);
-
+  /* 개발 편의: ping 로그 (원하면 주석 해제)
+  fetch(ENDPOINT + '?action=ping&callback=cb').then(r=>r.text()).then(t=>console.log("[ping]", t)).catch(console.warn);
+  */
 })();
 </script>
 </body>
