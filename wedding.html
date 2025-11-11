@@ -309,7 +309,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   "use strict";
 
   /* ================== 0) 설정 ================== */
-  // ★ 최신 GAS 배포 URL(Manage deployments → Web app → URL)
   const ENDPOINT = "https://script.google.com/macros/s/AKfycbylxBOnAjJSqmydH5GnLBexOsTo5G59Zpuj_B8JnoeqX4T8zwHvEVjzdEOu4C8E5Oh-Vg/exec";
 
   /* ================== 1) DOM/메시지 헬퍼 ================== */
@@ -382,12 +381,14 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     }
   }
 
-  /* ================== 3) JSONP (Promise) ================== */
+  /* ================== 3) JSONP (Promise) — 캐시버스터 포함 ================== */
   function jsonpPromise(url) {
     return new Promise((resolve, reject) => {
       const cb = `__gas_cb_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const s = document.createElement('script');
       const join = url.includes('?') ? '&' : '?';
+      // ★ 캐시 회피용 타임스탬프(ts) 추가
+      const src = `${url}${join}callback=${cb}&ts=${Date.now()}`;
       window[cb] = (data) => {
         try { resolve(data); }
         finally {
@@ -395,13 +396,13 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
           if (s && s.parentNode) s.parentNode.removeChild(s);
         }
       };
-      s.src = `${url}${join}callback=${cb}`;
+      s.src = src;
       s.onerror = () => { delete window[cb]; reject(new Error('JSONP failed')); };
       document.head.appendChild(s);
     });
   }
 
-  /* ================== 4) 1차: 스마트 즉시 추출 → 12초 초과시 비동기 전환 ================== */
+  /* ================== 4) 1차: 즉시 추출 → 12초 초과시 비동기 전환 ================== */
   function requestExtractSmart(url) {
     setMsg('⏳ AI로 분석 중(1차 시도)...', '#333');
     const req = ENDPOINT + `?action=extract_now&url=${encodeURIComponent(url)}`;
@@ -424,7 +425,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     });
   }
 
-  /* ================== 5) 2차: 비동기 예약/폴링 ================== */
+  /* ================== 5) 2차: 비동기 예약/폴링(재키크 + 지수 백오프) ================== */
   async function startAsyncExtract(url) {
     setMsg('⏳ 1차 응답 지연 → 비동기 모드로 전환합니다. (예약 중)...', '#555');
     const kick = `${ENDPOINT}?action=extract&url=${encodeURIComponent(url)}`;
@@ -442,17 +443,27 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
       return;
     }
     const status = (resp && resp.data && resp.data.status) || resp.status || "scheduled";
-    setMsg(`🔎 예약 완료(${status}) → 결과 대기 중...`, '#333');
-    pollJob(jobId);
+    setMsg(`🔎 예약 완료(${status}) → 결과 대기 중... (jobId: ${jobId})`, '#333');
+    pollJob(jobId, url);
   }
 
-  function pollJob(jobId){
+  function pollJob(jobId, url){
     const startedAt = Date.now();
-    const softDeadlineMs = 90000;
+    const hardDeadlineMs = 180000;  // 3분 하드 타임아웃
+    let attempt = 0;
+
     const tick = async () => {
+      attempt++;
+      const backoff = Math.min(2000 * Math.pow(1.15, attempt), 8000); // 지수 백오프(최대 8s)
       const chk = `${ENDPOINT}?action=check&jobId=${encodeURIComponent(jobId)}`;
       let res;
-      try { res = await jsonpPromise(chk); console.log("[check]", res); } catch(e){ console.warn("[check] error", e); }
+      try {
+        res = await jsonpPromise(chk);
+        console.log("[check]", res);
+      } catch(e){
+        console.warn("[check] error", e);
+      }
+
       const payload = res && res.data;
       if (payload && payload.status === 'complete' && payload.ok) {
         setMsg('✅ 분석 완료! 필드에 반영했습니다.', '#148914');
@@ -463,16 +474,28 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
         setMsg('❌ 분석 실패 (' + (payload.error || 'unknown') + ')', 'red');
         return;
       }
-      if (Date.now() - startedAt > softDeadlineMs) {
-        setMsg('⚠️ 응답 지연: 잠시 후 다시 시도하세요.', '#b45309');
+
+      // 45초 이상 'running'이면 재키크(서버가 지원하지 않아도 무해)
+      if (Date.now() - startedAt > 45000 && (payload && payload.status === 'running')) {
+        try {
+          console.log("[poke] re-kick extract for job:", jobId);
+          await jsonpPromise(`${ENDPOINT}?action=poke&jobId=${encodeURIComponent(jobId)}&url=${encodeURIComponent(url)}`);
+          setMsg('🟡 처리 지연 감지 → 서버에 재시작 신호를 보냈습니다. 계속 대기 중...', '#666');
+        } catch(e) {
+          console.warn("[poke] error", e);
+        }
+      }
+
+      if (Date.now() - startedAt > hardDeadlineMs) {
+        setMsg('⚠️ 응답 지연: 서버가 오래 대기 상태입니다. 잠시 후 다시 시도하거나 URL을 확인하세요.', '#b45309');
         return;
       }
-      setTimeout(tick, 1200);
+      setTimeout(tick, backoff);
     };
     tick();
   }
 
-  /* ================== 6) 공통: 필드 반영 + 2차 제안 저장 ================== */
+  /* ================== 6) 필드 반영 + 제안 저장 ================== */
   window.__applyDataToFields = function(data){
     $('groomFather').value = data.groomFather || "";
     $('groomMother').value = data.groomMother || "";
@@ -491,13 +514,12 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     $('venueAddr').value   = data.venueAddr || "";
     $('venueDetail').value = data.venue     || data.venueDetail || "";
 
-    // 2차 제안 저장
     const CONTACT_KEYS = ["groomPhone","bridePhone","groomFatherPhone","groomMotherPhone","brideFatherPhone","brideMotherPhone"];
     const ACCOUNT_KEYS = ["groomBank","groomAccount","brideBank","brideAccount","groomFatherBank","groomFatherAccount","groomMotherBank","groomMotherAccount","brideFatherBank","brideFatherAccount","brideMotherBank","brideMotherAccount"];
     const ai = {};
     CONTACT_KEYS.concat(ACCOUNT_KEYS).forEach((k)=>{ if(data[k]) ai[k]=data[k]; });
     try { localStorage.setItem('ai_suggestions', JSON.stringify(ai)); } catch(_){}
-    // 1차 기본 정보 저장
+
     const inviteInfo = {
       groomFather: $('groomFather').value,
       groomMother: $('groomMother').value,
@@ -552,7 +574,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     grid.innerHTML = '';
 
     const first = new Date(year, month, 1);
-    const startDay = first.getDay(); // 0:일
+    const startDay = first.getDay();
     const last = new Date(year, month+1, 0).getDate();
 
     for (let i=0;i<startDay;i++){
@@ -611,7 +633,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
       minCol.appendChild(makeItem(m, (t)=>{ $('tempMin').value = t; }));
     });
 
-    const cur = $('eventTime').value; // HH:MM
+    const cur = $('eventTime').value;
     if (cur){
       const [HH,MM] = cur.split(':');
       const {ampm,h} = to12h(HH);
@@ -712,10 +734,8 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   }
 
   document.addEventListener('DOMContentLoaded', ()=>{
-    // AI 추출 버튼
     initCheckButton();
 
-    // 수기입력 토글
     $('noInvite')?.addEventListener('change', (e)=>{
       const on = e.target.checked;
       $('inviteUrl').disabled = on;
@@ -723,12 +743,10 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
       else setMsg("");
     });
 
-    // 주소 필드 클릭 안내(읽기전용)
     $('venueAddr')?.addEventListener('click', ()=>{
       setMsg("주소 검색은 다음 단계에서 진행합니다. (현재는 읽기 전용)", "#333");
     });
 
-    // 날짜 모달
     $('eventDateDisplay')?.addEventListener('click', ()=>{
       let base = $('eventDate').value || new Date().toISOString().slice(0,10);
       let [y,m] = base.split('-');
@@ -753,7 +771,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
       closeModal(datePicker);
     });
 
-    // 시간 모달
     $('eventTimeDisplay')?.addEventListener('click', ()=>{
       buildTimeColumns();
       openModal(timePicker);
@@ -770,17 +787,13 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
       closeModal(timePicker);
     });
 
-    // 배경 클릭 닫기
     $('pickerBackdrop')?.addEventListener('click', ()=>{
       closeModal(datePicker); closeModal(timePicker);
     });
 
-    // 커스텀 셀렉트 초기화
     document.querySelectorAll('.cselect').forEach(initCustomSelect);
-    // 세그먼트 초기화
     document.querySelectorAll('.seg[data-for]').forEach(initSegment);
 
-    // 다음 단계(유효성 간단 체크)
     $('btnNext')?.addEventListener('click', ()=>{
       if (!$('eventDate').value) { $('eventDateDisplay').setAttribute('aria-invalid','true'); setMsg("예식일을 선택하세요.", "red"); return; }
       if (!$('eventTime').value) { $('eventTimeDisplay').setAttribute('aria-invalid','true'); setMsg("예식 시간을 선택하세요.", "red"); return; }
@@ -809,7 +822,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     });
   });
 
-  /* 개발 편의: ping 로그 (원하면 주석 해제)
+  /* 개발 중 ping 로그 — 필요시 주석 해제
   fetch(ENDPOINT + '?action=ping&callback=cb').then(r=>r.text()).then(t=>console.log("[ping]", t)).catch(console.warn);
   */
 })();
