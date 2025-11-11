@@ -443,7 +443,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 
   function pollJob(jobId){
     const startedAt = Date.now();
-    const softDeadlineMs = 45000;
+    const softDeadlineMs = 90000;
     const tick = async () => {
       const chk = `${ENDPOINT}?action=check&jobId=${encodeURIComponent(jobId)}`;
       let res;
