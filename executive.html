@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>임원 기본 정보 입력</title>
+<title>부고 정보 입력</title>
 <style>
+/* ================== 기본 레이아웃 ================== */
 body{
   font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   margin:0; padding:16px; background:#f9f9f9; color:#111;
@@ -16,77 +17,666 @@ body{
 h2{ margin-top:0; font-size:18px; }
 label{ display:block; margin:8px 0 4px; font-weight:600; font-size:14px; }
 
-input[type="text"], input[type="tel"]{
+/* ================== 폼 컨트롤 공통 ================== */
+input[type="text"], input[type="url"], select{
   width:100%; padding:10px 12px; font-size:14px;
   border:1.5px solid #ddd; border-radius:8px; background:#fff;
   transition:.2s; outline:none; box-sizing:border-box;
 }
 input::placeholder{ color:#aaa; font-size:13px; }
-input:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17,.08); }
+input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17,.08); }
 
+.row{ display:flex; gap:6px; }
 .btn{ padding:10px 12px; border:0; border-radius:6px; cursor:pointer; font-weight:600; font-size:14px; }
 .btn.primary{ background:#111; color:#fff; width:100%; margin-top:12px; }
-.btn.primary:disabled{ background:#999; cursor:not-allowed; }
+.section{ margin-top:16px; padding-top:12px; border-top:1px solid #eee; }
 .msg{ margin-top:8px; font-size:13px; }
+
+/* ================== 토글 스위치 ================== */
+.toggle-wrapper{ display:flex; align-items:center; justify-content:space-between; margin:12px 0; font-size:14px; }
+.switch{ position:relative; display:inline-block; width:42px; height:24px; }
+.switch input{ opacity:0; width:0; height:0; }
+.slider{ position:absolute; inset:0; cursor:pointer; background:#ccc; border-radius:24px; transition:.3s; }
+.slider:before{ content:""; position:absolute; height:18px; width:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s; }
+.switch input:checked + .slider{ background:#111; }
+.switch input:checked + .slider:before{ transform:translateX(18px); }
+
+/* ================== 커스텀 셀렉트 ================== */
+.native-select--hidden{ position:absolute !important; inset:0; opacity:0; pointer-events:none; height:0; width:0; }
+.cselect{ position:relative; }
+.cselect__btn{
+  width:100%; padding:10px 12px; font-size:14px;
+  border:1.5px solid #ddd; border-radius:8px; background:#fff;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.cselect__btn:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17,.08); }
+.cselect__arrow{
+  width:16px; height:16px; flex:0 0 16px;
+  mask:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat center / contain;
+  background:#111; opacity:.9;
+}
+.cselect__list{
+  position:absolute; z-index:20; left:0; right:0; top:calc(100% + 6px);
+  background:#fff; border:1px solid #e5e5e5; border-radius:10px;
+  box-shadow:0 6px 16px rgba(0,0,0,.08); max-height:240px; overflow:auto; padding:6px; display:none;
+}
+.cselect__list.is-open{ display:block; }
+.cselect__option{ padding:10px; border-radius:8px; font-size:14px; cursor:pointer; }
+.cselect__option[aria-selected="true"]{ background:#111; color:#fff; }
+.cselect__option:hover{ background:#f2f2f2; }
+
+/* ================== 세그먼트 버튼 ================== */
+.seg{ display:flex; gap:6px; }
+.seg__btn{
+  flex:1; padding:10px 12px; border:1.5px solid #ddd; border-radius:6px;
+  background:#fff; font-weight:600; font-size:14px; cursor:pointer;
+}
+.seg__btn[aria-pressed="true"], .seg__btn.is-selected{ background:#111; color:#fff; border-color:#111; }
+
+.hidden{ display:none !important; }
+
+/* ================== 날짜/시간 표시 필드 ================== */
+.field{ position:relative; }
+.display-input{ padding-right:40px; cursor:pointer; background:#fff; }
+.field--flex1{ flex:1; }
+.display-input[aria-invalid="true"]{ border-color:#f33; box-shadow:0 0 0 3px rgba(255,51,51,.12); }
+.input-icon{
+  position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  width:18px; height:18px; opacity:.9; pointer-events:none;
+  background-size:contain; background-repeat:no-repeat; background-position:center;
+}
+.input-icon.icon-calendar{
+  background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23111" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>');
+}
+.input-icon.icon-clock{
+  background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23111" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/></svg>');
+}
+@supports (scrollbar-width: none){ .time-col{ scrollbar-width: none; } }
+
+/* ================== 모달(달력/시간 피커) 공통 ================== */
+.picker-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; z-index:1000; }
+.picker{
+  position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(420px,92vw); background:#fff; border-radius:12px;
+  box-shadow:0 20px 48px rgba(0,0,0,.24); display:none; z-index:1001;
+}
+.picker__hdr{ display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid #eee; }
+.picker__title{ font-weight:700; }
+.picker__body{ padding:12px; }
+.picker__ftr{ display:flex; gap:8px; padding:12px; border-top:1px solid #eee; }
+.picker__btn{ flex:1; padding:10px 12px; border-radius:8px; border:1.5px solid #ddd; background:#fff; font-weight:700; cursor:pointer; }
+.picker__btn.primary{ background:#111; color:#fff; border-color:#111; }
+.icon-btn{ border:1.5px solid #ddd; background:#fff; border-radius:8px; width:36px; height:32px; cursor:pointer; }
+
+.cal-topline{ display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px; }
+.cal-left{ font-weight:800; font-size:14px; color:#111; }
+.cal-ym{ font-weight:800; font-size:18px; letter-spacing:.3px; }
+.cal-head{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:6px; font-size:14px; font-weight:700; text-align:center; }
+.cal-head .sun{ color:#C82D2D; } .cal-head .sat{ color:#142396; }
+.cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.cal-day{ padding:10px 0; text-align:center; border-radius:8px; border:1px solid transparent; cursor:pointer; background:#fff; color:#111; font-weight:600; }
+.cal-day:hover{ background:#f5f5f5; }
+.cal-day.out{ color:#bbb; cursor:default; background:transparent; }
+.cal-day.today{ border-color:#111; }
+.cal-day.sel{ background:#111; color:#fff !important; }
+.cal-day.sun{ color:#C82D2D !important; } .cal-day.sat{ color:#142396 !important; }
+
+.time-wrap{ display:flex; gap:8px; }
+.time-col{ flex:1; max-height:260px; overflow-y:auto; overflow-x:hidden; border:1px solid #eee; border-radius:12px; background:#fafafa; padding:8px; }
+.time-col--ampm{ flex:.9; }
+.time-col::-webkit-scrollbar{ display:none; }
+.time-col{ -ms-overflow-style:none; }
+.date-picker-text{ padding:0 14px 12px; color:#111; font-weight:700; }
+.time-item{ width:100%; padding:10px 0; margin:4px 0; border-radius:10px; cursor:pointer; text-align:center; border:1.5px solid transparent; background:#fff; font-weight:600; }
+.time-item:hover{ background:#f5f5f5; }
+.time-item.sel{ background:#111; color:#fff; border-color:#111; }
+
+.hint{ color:#8a8a8a; font-size:12px; margin-top:6px; display:block; }
+.sr-only{ position:absolute !important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+.sr-abs-left{ position:absolute !important; left:-9999px; }
 .req{ color:#e11; margin-left:2px; }
 </style>
 </head>
 <body>
 <div class="card">
-  <h2>임원 기본 정보 입력</h2>
+  <h2>부고 정보 입력</h2>
 
-  <label for="name">성명 <span class="req">*</span></label>
-  <input id="name" type="text" placeholder="예) 홍길동" autocomplete="name" />
+  <div id="funeralUrlBlock">
+    <label for="funeralUrl">모바일 부고장 URL</label>
+    <input id="funeralUrl" type="url" placeholder="https://..." />
+  </div>
 
-  <label for="phone">연락처 <span class="req">*</span></label>
-  <input id="phone" type="tel" placeholder="010-1234-5678 (하이픈 포함)" autocomplete="tel" />
+  <div class="toggle-wrapper">
+    <span id="noFuneralLabel">모바일 부고장 없음 (수기 입력)</span>
+    <label class="switch">
+      <input type="checkbox" id="noFuneral" aria-labelledby="noFuneralLabel" />
+      <span class="slider"></span>
+    </label>
+  </div>
 
+  <button class="btn primary" id="btnCheck">AI로 부고 정보 확인</button>
   <div id="msg" class="msg"></div>
 
-  <button class="btn primary" id="btnNext" disabled>다음 (상세 정보 입력)</button>
+  <!-- 고인 정보 -->
+  <div class="section">
+    <h3>고인 정보</h3>
+    <label for="deceasedName">고인 성함 <span class="req">*</span></label>
+    <input id="deceasedName" type="text" placeholder="예) 홍길동" />
+
+    <label for="relationship" id="relationshipLabel">고인과의 관계 <span class="req">*</span></label>
+    <select id="relationship" class="native-select--hidden" data-ui="custom-select">
+      <option value="">선택</option>
+      <option>부친상</option>
+      <option>모친상</option>
+      <option>배우자상</option>
+      <option>형상</option>
+      <option>제상</option>
+      <option>자녀상</option>
+      <option>본인상</option>
+    </select>
+    <div class="cselect" data-for="relationship" aria-haspopup="listbox">
+      <button type="button" class="cselect__btn" id="relationshipBtn" aria-expanded="false">선택<span class="cselect__arrow"></span></button>
+      <div class="cselect__list" role="listbox" aria-labelledby="relationshipLabel relationshipBtn"></div>
+    </div>
+
+    <label for="chiefMourner">상주 성함 <span class="req">*</span></label>
+    <input id="chiefMourner" type="text" placeholder="예) 홍길동" />
+  </div>
+
+  <!-- 빈소 정보 -->
+  <div class="section">
+    <h3>빈소 정보</h3>
+    <label for="funeralHall">장례식장 <span class="req">*</span></label>
+    <input id="funeralHall" type="text" placeholder="예) 삼성서울병원 장례식장 1호실" />
+
+    <label for="funeralAddr">주소 <span class="req">*</span></label>
+    <input id="funeralAddr" type="text" placeholder="예) 서울특별시 강남구 일원로 81" />
+  </div>
+
+  <!-- 발인 정보 -->
+  <div class="section">
+    <h3>발인 정보</h3>
+
+    <input type="hidden" id="funeralDate" />
+    <input type="hidden" id="funeralTime" />
+
+    <label id="funeralDateLabel">발인 일시 <span class="req">*</span></label>
+    <div class="row">
+      <div class="field field--flex1">
+        <input id="funeralDateDisplay" class="display-input" type="text" placeholder="YYYY.MM.DD" readonly aria-labelledby="funeralDateLabel" aria-required="true" />
+        <span class="input-icon icon-calendar" aria-hidden="true"></span>
+      </div>
+      <div class="field field--flex1">
+        <input id="funeralTimeDisplay" class="display-input" type="text" placeholder="오전 07:00" readonly aria-labelledby="funeralDateLabel" aria-required="true" />
+        <span class="input-icon icon-clock" aria-hidden="true"></span>
+      </div>
+    </div>
+
+    <label for="burialSite">장지</label>
+    <input id="burialSite" type="text" placeholder="예) 천안공원묘지 (미정 시 공란)" />
+  </div>
+
+  <!-- 근조화환 -->
+  <div class="section">
+    <label for="wreathInput">근조화환 수령 <span class="req">*</span></label>
+    <div class="seg" data-for="wreathInput">
+      <button type="button" class="seg__btn" data-value="희망" aria-pressed="false">희망</button>
+      <button type="button" class="seg__btn" data-value="비희망" aria-pressed="false">비희망</button>
+    </div>
+    <input type="hidden" id="wreathInput" value="" />
+  </div>
+
+  <button class="btn primary" id="btnNext">다음 (임원 정보 입력)</button>
+</div>
+
+<!-- 날짜/시간 피커 -->
+<div id="pickerBackdrop" class="picker-backdrop"></div>
+
+<div id="datePicker" class="picker" role="dialog" aria-modal="true" aria-label="날짜 선택">
+  <div class="picker__hdr">
+    <div class="cal-topline">
+      <div class="cal-left">발인일</div>
+      <div class="cal-ym" id="dateYM">0000.00</div>
+      <div>
+        <button class="icon-btn" id="prevMonth" aria-label="이전 달">‹</button>
+        <button class="icon-btn" id="nextMonth" aria-label="다음 달">›</button>
+      </div>
+    </div>
+  </div>
+  <div class="picker__body">
+    <div class="cal-head">
+      <div class="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="sat">토</div>
+    </div>
+    <div id="calGrid" class="cal-grid"></div>
+  </div>
+  <div class="picker__ftr">
+    <button class="picker__btn" id="dateCancel">취소</button>
+    <button class="picker__btn primary" id="dateConfirm">확인</button>
+  </div>
+  <input type="hidden" id="tempDate" />
+  <input type="hidden" id="calYear" /><input type="hidden" id="calMonth" />
+  <div class="sr-abs-left" aria-live="polite" id="dateLive"></div>
+  <div class="date-picker-text" id="dateSelectedText"></div>
+</div>
+
+<div id="timePicker" class="picker" role="dialog" aria-modal="true" aria-label="시간 선택">
+  <div class="picker__hdr">
+    <div class="picker__title">시간 선택</div>
+  </div>
+  <div class="picker__body">
+    <span id="ampmGroupLabel" class="sr-only">오전/오후 선택</span>
+    <span id="hourGroupLabel" class="sr-only">시간(시) 선택</span>
+    <span id="minGroupLabel"  class="sr-only">시간(분) 선택</span>
+    <div class="time-wrap">
+      <div class="time-col time-col--ampm" id="ampmCol" role="group" aria-labelledby="ampmGroupLabel"></div>
+      <div class="time-col" id="hourCol" role="group" aria-labelledby="hourGroupLabel"></div>
+      <div class="time-col" id="minCol"  role="group" aria-labelledby="minGroupLabel"></div>
+    </div>
+  </div>
+  <div class="picker__ftr">
+    <button class="picker__btn" id="timeCancel">취소</button>
+    <button class="picker__btn primary" id="timeConfirm">확인</button>
+  </div>
+  <input type="hidden" id="tempHour" /><input type="hidden" id="tempMin" />
 </div>
 
 <script>
 (function(){
   "use strict";
 
-  const $ = (id) => document.getElementById(id);
+  /* ================== 0) 설정 ================== */
+  const ENDPOINT = "https://script.google.com/macros/s/YOUR_EXECUTIVE_GAS_ENDPOINT/exec";
 
+  /* ================== 1) 동의 확인 ================== */
   if(localStorage.getItem('executive:consent') !== 'true'){
     alert('개인정보 수집 동의가 필요합니다.');
     location.replace('./executive_privacy.html');
   }
 
+  /* ================== 2) DOM/메시지 헬퍼 ================== */
+  const $ = (id) => document.getElementById(id);
   function setMsg(text, color="#333"){
-    $('msg').textContent = text;
-    $('msg').style.color = color;
+    const el = $('msg');
+    if(el){ el.textContent = text; el.style.color = color; }
   }
+  const pad = (n) => String(n).padStart(2,'0');
 
-  function validate(){
-    const name  = ($('name').value  || '').trim();
-    const phone = ($('phone').value || '').trim();
-    const btn   = $('btnNext');
-
-    if(!name || !phone){ btn.disabled = true; setMsg(''); return; }
-    if(!/^[0-9-]{9,14}$/.test(phone)){
-      setMsg('연락처 형식을 확인해 주세요. (예: 010-1234-5678)', '#b45309');
-      btn.disabled = true;
-      return;
+  /* ================== 3) 날짜/시간 유틸 ================== */
+  function normalizeToHHMM(raw){
+    if(!raw) return '';
+    let s = String(raw).trim()
+      .replace(/\s+/g,' ')
+      .replace(/시/g,':').replace(/분/g,'')
+      .replace(/\.00\b/g,':00');
+    if(/^\d{3,4}$/.test(s) && !s.includes(':')){
+      const mm = s.slice(-2), hh = s.slice(0, s.length-2);
+      s = `${hh}:${mm}`;
     }
-    setMsg('');
-    btn.disabled = false;
+    const hms = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    const ap  = s.match(/^(오전|오후|AM|PM|am|pm)\s*(\d{1,2})(?::|시)?\s*(\d{2})?$/);
+    if(ap){
+      const ampm = ap[1].toLowerCase();
+      let h12 = parseInt(ap[2],10);
+      const mm = ap[3] || '00';
+      if(ampm==='오전'||ampm==='am'){ if(h12===12) h12=0; } else { if(h12<12) h12+=12; }
+      return `${pad(h12)}:${mm}`;
+    }
+    if(hms){ let hh=parseInt(hms[1],10); if(hh>24) hh=hh%24; return `${pad(hh)}:${hms[2]}`; }
+    return '';
+  }
+  function to12h(h24){
+    const n = parseInt(h24,10);
+    if(isNaN(n)) return {ampm:'오전',h:'12'};
+    if(n===0)  return {ampm:'오전',h:'12'};
+    if(n===12) return {ampm:'오후',h:'12'};
+    if(n>12)   return {ampm:'오후',h:String(n-12).padStart(2,'0')};
+    return {ampm:'오전',h:String(n).padStart(2,'0')};
+  }
+  function setDateDisplay(iso){
+    $('funeralDate').value = iso || '';
+    $('funeralDateDisplay').value = iso ? iso.split('-').join('.') : '';
+    $('funeralDateDisplay').removeAttribute('aria-invalid');
+  }
+  function setTimeDisplay(v){
+    const norm = normalizeToHHMM(v);
+    if(norm){
+      $('funeralTime').value = norm;
+      const [hh,mm] = norm.split(':'); const t = to12h(hh);
+      $('funeralTimeDisplay').value = `${t.ampm} ${t.h}:${mm}`;
+      $('funeralTimeDisplay').removeAttribute('aria-invalid');
+    } else {
+      $('funeralTime').value = ''; $('funeralTimeDisplay').value = '';
+    }
   }
 
-  $('name').addEventListener('input', validate);
-  $('phone').addEventListener('input', validate);
+  /* ================== 4) JSONP ================== */
+  function jsonpPromise(url){
+    return new Promise((resolve, reject) => {
+      const cb = `__gas_cb_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const s  = document.createElement('script');
+      const src = `${url}${url.includes('?')?'&':'?'}callback=${cb}&ts=${Date.now()}`;
+      window[cb] = (data) => { try{ resolve(data); } finally { delete window[cb]; if(s.parentNode) s.parentNode.removeChild(s); } };
+      s.src    = src;
+      s.onerror = () => { delete window[cb]; reject(new Error('JSONP failed')); };
+      document.head.appendChild(s);
+    });
+  }
 
-  $('btnNext').addEventListener('click', () => {
-    const phase1 = {
-      name:  ($('name').value  || '').trim(),
-      phone: ($('phone').value || '').trim()
+  /* ================== 5) AI 추출 (즉시→비동기 폴링) ================== */
+  function requestExtractSmart(url){
+    setMsg('⏳ AI로 분석 중(1차 시도)...', '#333');
+    const req = ENDPOINT + `?action=extract_funeral_now&url=${encodeURIComponent(url)}`;
+    let switched = false;
+    const watchdog = setTimeout(() => { switched = true; startAsyncExtract(url); }, 12000);
+    jsonpPromise(req).then(resp => {
+      if(switched) return;
+      clearTimeout(watchdog);
+      handleExtractNow(resp);
+    }).catch(e => {
+      if(switched) return;
+      clearTimeout(watchdog);
+      startAsyncExtract(url);
+    });
+  }
+
+  async function startAsyncExtract(url){
+    setMsg('⏳ 비동기 모드로 전환합니다. (예약 중)...', '#555');
+    const kick = `${ENDPOINT}?action=extract_funeral&url=${encodeURIComponent(url)}`;
+    let resp;
+    try { resp = await jsonpPromise(kick); }
+    catch(e){ setMsg('❌ 예약 실패: ' + e.message, 'red'); return; }
+    const jobId = (resp?.data?.jobId) || resp?.jobId || '';
+    if(!jobId){ setMsg('❌ 예약 응답 형식 오류', 'red'); return; }
+    setMsg(`🔎 예약 완료 → 결과 대기 중... (jobId: ${jobId})`, '#333');
+    pollJob(jobId, url);
+  }
+
+  function pollJob(jobId, url){
+    const startedAt = Date.now();
+    let attempt = 0;
+    const tick = async () => {
+      attempt++;
+      const backoff = Math.min(2000 * Math.pow(1.15, attempt), 8000);
+      let res;
+      try { res = await jsonpPromise(`${ENDPOINT}?action=check&jobId=${encodeURIComponent(jobId)}`); }
+      catch(e){ console.warn('[check] error', e); }
+      const payload = res?.data;
+      if(payload?.status === 'complete' && payload?.ok){
+        setMsg('✅ 분석 완료! 필드에 반영했습니다.', '#148914');
+        applyDataToFields(payload.data || {});
+        return;
+      }
+      if(payload?.status === 'failed'){
+        setMsg('❌ 분석 실패 (' + (payload.error || 'unknown') + ')', 'red'); return;
+      }
+      if(Date.now() - startedAt > 45000 && payload?.status === 'running'){
+        try{ await jsonpPromise(`${ENDPOINT}?action=poke&jobId=${encodeURIComponent(jobId)}&url=${encodeURIComponent(url)}`); }
+        catch(_){}
+        setMsg('🟡 처리 지연 감지 → 재시작 신호를 보냈습니다. 계속 대기 중...', '#666');
+      }
+      if(Date.now() - startedAt > 180000){
+        setMsg('⚠️ 응답 지연: 잠시 후 다시 시도하거나 URL을 확인하세요.', '#b45309'); return;
+      }
+      setTimeout(tick, backoff);
     };
-    try { localStorage.setItem('executive:phase1', JSON.stringify(phase1)); } catch(_){}
-    location.href = './executive_detail.html';
+    tick();
+  }
+
+  /* ================== 6) 필드 반영 ================== */
+  function applyDataToFields(data){
+    $('deceasedName').value  = data.deceasedName  || '';
+    $('chiefMourner').value  = data.chiefMourner  || '';
+    $('funeralHall').value   = data.funeralHall   || '';
+    $('funeralAddr').value   = data.funeralAddr   || '';
+    $('burialSite').value    = data.burialSite     || '';
+
+    if(data.relationship){
+      $('relationship').value = data.relationship;
+      syncCustomSelect($('relationship'));
+    }
+    if(data.funeralDate) setDateDisplay(data.funeralDate);
+    if(data.funeralTime) setTimeDisplay(data.funeralTime);
+
+    saveFuneralInfo();
+  }
+
+  window.handleExtractNow = function(resp){
+    let payload;
+    if(resp && typeof resp.ok !== 'undefined'){
+      payload = { ok:!!resp.ok, status: resp.status||(resp.ok?'complete':'failed'), data: resp.data||{}, error: resp.error||'' };
+    } else if(resp?.data){ payload = resp.data; }
+    if(!payload){ setMsg('❌ 응답 형식 오류', 'red'); return; }
+    if(payload.ok && (payload.status==='complete'||typeof payload.status==='undefined')){
+      setMsg('✅ 정보를 추출하여 필드에 자동 입력했습니다.', '#148914');
+      applyDataToFields(payload.data || {});
+    } else {
+      setMsg('❌ 1차 분석 실패: ' + (payload.error||payload.status||'Unknown') + ' → 비동기 전환', '#b45309');
+      const url = ($('funeralUrl').value||'').trim();
+      if(url) startAsyncExtract(url);
+    }
+  };
+
+  /* ================== 7) 달력/시간 피커 ================== */
+  const backdrop   = $('pickerBackdrop');
+  const datePicker = $('datePicker');
+  const timePicker = $('timePicker');
+
+  function openModal(el){ if(backdrop) backdrop.style.display='block'; if(el) el.style.display='block'; }
+  function closeModal(el){ if(el) el.style.display='none'; if(backdrop) backdrop.style.display='none'; }
+
+  function buildCalendar(year, month){
+    $('calYear').value = year; $('calMonth').value = month;
+    $('dateYM').textContent = `${year}.${pad(month+1)}`;
+    const grid = $('calGrid'); grid.innerHTML = '';
+    const first = new Date(year, month, 1);
+    const startDay = first.getDay();
+    const last = new Date(year, month+1, 0).getDate();
+    for(let i=0;i<startDay;i++){ const d=document.createElement('div'); d.className='cal-day out'; grid.appendChild(d); }
+    const todayIso = new Date().toISOString().slice(0,10);
+    const selIso   = $('tempDate').value || $('funeralDate').value || '';
+    for(let day=1;day<=last;day++){
+      const iso = `${year}-${pad(month+1)}-${pad(day)}`;
+      const btn = document.createElement('div');
+      btn.className = 'cal-day'; btn.textContent = String(day);
+      const wd = new Date(year,month,day).getDay();
+      if(wd===0) btn.classList.add('sun'); if(wd===6) btn.classList.add('sat');
+      if(iso===todayIso) btn.classList.add('today');
+      if(iso===selIso)   btn.classList.add('sel');
+      btn.addEventListener('click', ()=>{
+        Array.from(grid.querySelectorAll('.cal-day.sel')).forEach(e=>e.classList.remove('sel'));
+        btn.classList.add('sel'); $('tempDate').value = iso;
+        $('dateSelectedText').textContent = `선택: ${iso.replaceAll('-','.')}`;
+        $('dateLive').textContent = `${iso} 선택됨`;
+      });
+      grid.appendChild(btn);
+    }
+  }
+
+  function buildTimeColumns(){
+    const ampmCol=$('ampmCol'), hourCol=$('hourCol'), minCol=$('minCol');
+    ampmCol.innerHTML=''; hourCol.innerHTML=''; minCol.innerHTML='';
+    const makeItem = (txt, on) => {
+      const el = document.createElement('div');
+      el.className='time-item'; el.textContent=txt;
+      el.addEventListener('click',()=>{
+        Array.from(el.parentElement.querySelectorAll('.time-item.sel')).forEach(n=>n.classList.remove('sel'));
+        el.classList.add('sel'); on(txt);
+      });
+      return el;
+    };
+    ['오전','오후'].forEach(v=>{ ampmCol.appendChild(makeItem(v,(t)=>{ ampmCol.dataset.value=t; })); });
+    for(let h=1;h<=12;h++){ const hh=String(h).padStart(2,'0'); hourCol.appendChild(makeItem(hh,(t)=>{ $('tempHour').value=t; })); }
+    ['00','10','20','30','40','50'].forEach(m=>{ minCol.appendChild(makeItem(m,(t)=>{ $('tempMin').value=t; })); });
+    const cur = $('funeralTime').value;
+    if(cur){
+      const [HH,MM]=cur.split(':'); const {ampm,h}=to12h(HH);
+      ampmCol.dataset.value=ampm;
+      Array.from(ampmCol.children).forEach(e=>{ if(e.textContent===ampm) e.classList.add('sel'); });
+      $('tempHour').value=h; $('tempMin').value=MM;
+      Array.from(hourCol.children).forEach(e=>{ if(e.textContent===h) e.classList.add('sel'); });
+      Array.from(minCol.children).forEach(e=>{ if(e.textContent===MM) e.classList.add('sel'); });
+    } else {
+      ampmCol.dataset.value='오전'; ampmCol.children[0].classList.add('sel');
+      $('tempHour').value='07'; $('tempMin').value='00';
+      hourCol.children[6].classList.add('sel'); minCol.children[0].classList.add('sel');
+    }
+  }
+
+  /* ================== 8) 커스텀 셀렉트/세그먼트 ================== */
+  function syncCustomSelect(selectEl){
+    const wrapper = document.querySelector(`.cselect[data-for="${selectEl.id}"]`);
+    if(!wrapper) return;
+    const btn  = wrapper.querySelector('.cselect__btn');
+    const list = wrapper.querySelector('.cselect__list');
+    const cur  = selectEl.options[selectEl.selectedIndex];
+    const label = cur ? cur.textContent : '선택';
+    if(btn.firstChild) btn.firstChild.textContent = label;
+    Array.from(list.children).forEach(item => {
+      item.setAttribute('aria-selected', item.textContent === label ? 'true' : 'false');
+    });
+  }
+
+  function initCustomSelect(wrapper){
+    const targetId = wrapper.getAttribute('data-for');
+    const select   = $(targetId);
+    const btn      = wrapper.querySelector('.cselect__btn');
+    const list     = wrapper.querySelector('.cselect__list');
+    function render(){
+      list.innerHTML = '';
+      Array.from(select.options).forEach(opt => {
+        const item = document.createElement('div');
+        item.className = 'cselect__option'; item.setAttribute('role','option');
+        item.textContent = opt.textContent;
+        if(opt.value === select.value) item.setAttribute('aria-selected','true');
+        item.addEventListener('click', ()=>{
+          select.value = opt.value;
+          btn.firstChild.textContent = opt.textContent;
+          list.classList.remove('is-open');
+          Array.from(list.children).forEach(n=>n.removeAttribute('aria-selected'));
+          item.setAttribute('aria-selected','true');
+        });
+        list.appendChild(item);
+      });
+      const cur = select.options[select.selectedIndex];
+      if(btn.firstChild) btn.firstChild.textContent = cur ? cur.textContent : '선택';
+      else btn.textContent = cur ? cur.textContent : '선택';
+    }
+    render();
+    btn.addEventListener('click', ()=>{
+      list.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', list.classList.contains('is-open') ? 'true' : 'false');
+    });
+    document.addEventListener('click', e => {
+      if(!wrapper.contains(e.target)){ list.classList.remove('is-open'); btn.setAttribute('aria-expanded','false'); }
+    });
+  }
+
+  function initSegment(groupEl){
+    const targetId = groupEl.getAttribute('data-for');
+    const hidden   = $(targetId);
+    groupEl.querySelectorAll('.seg__btn').forEach(btn => {
+      btn.addEventListener('click', ()=>{
+        groupEl.querySelectorAll('.seg__btn').forEach(b=>{ b.classList.remove('is-selected'); b.setAttribute('aria-pressed','false'); });
+        btn.classList.add('is-selected'); btn.setAttribute('aria-pressed','true');
+        if(hidden) hidden.value = btn.getAttribute('data-value') || '';
+      });
+    });
+  }
+
+  /* ================== 9) localStorage 저장 ================== */
+  function saveFuneralInfo(){
+    const info = {
+      deceasedName: $('deceasedName').value,
+      relationship: $('relationship').value,
+      chiefMourner: $('chiefMourner').value,
+      funeralHall:  $('funeralHall').value,
+      funeralAddr:  $('funeralAddr').value,
+      funeralDate:  $('funeralDate').value,
+      funeralTime:  $('funeralTime').value,
+      burialSite:   $('burialSite').value,
+      wreath:       $('wreathInput').value
+    };
+    try { localStorage.setItem('executive:phase1', JSON.stringify(info)); } catch(_){}
+  }
+
+  /* ================== 10) 초기 바인딩 ================== */
+  document.addEventListener('DOMContentLoaded', () => {
+    // AI 분석 버튼
+    const btnCheck  = $('btnCheck');
+    const urlInput  = $('funeralUrl');
+    const syncBtn   = () => {
+      const ok = (urlInput.value||'').trim().length > 8;
+      btnCheck.disabled = !ok;
+    };
+    syncBtn();
+    urlInput.addEventListener('input', syncBtn);
+    btnCheck.addEventListener('click', e => {
+      e.preventDefault();
+      if(btnCheck.disabled) return;
+      requestExtractSmart((urlInput.value||'').trim());
+    });
+
+    // 수기 입력 토글
+    $('noFuneral')?.addEventListener('change', e => {
+      const on = e.target.checked;
+      urlInput.disabled = on;
+      btnCheck.disabled = on;
+      if(on) setMsg('수기 입력 모드입니다. 아래 필드를 직접 채워주세요.', '#333');
+      else { setMsg(''); syncBtn(); }
+    });
+
+    // 날짜/시간 피커
+    $('funeralDateDisplay')?.addEventListener('click', () => {
+      let base = $('funeralDate').value || new Date().toISOString().slice(0,10);
+      const [y,m] = base.split('-');
+      buildCalendar(parseInt(y,10), parseInt(m,10)-1);
+      $('tempDate').value = $('funeralDate').value || '';
+      $('dateSelectedText').textContent = $('tempDate').value ? `선택: ${$('tempDate').value.replaceAll('-','.')}` : '';
+      openModal(datePicker);
+    });
+    $('prevMonth')?.addEventListener('click', () => {
+      let y=parseInt($('calYear').value,10), m=parseInt($('calMonth').value,10);
+      m--; if(m<0){m=11;y--;} buildCalendar(y,m);
+    });
+    $('nextMonth')?.addEventListener('click', () => {
+      let y=parseInt($('calYear').value,10), m=parseInt($('calMonth').value,10);
+      m++; if(m>11){m=0;y++;} buildCalendar(y,m);
+    });
+    $('dateCancel')?.addEventListener('click', () => closeModal(datePicker));
+    $('dateConfirm')?.addEventListener('click', () => {
+      const iso = $('tempDate').value;
+      if(!iso){ $('funeralDateDisplay').setAttribute('aria-invalid','true'); return; }
+      setDateDisplay(iso); closeModal(datePicker);
+    });
+    $('funeralTimeDisplay')?.addEventListener('click', () => { buildTimeColumns(); openModal(timePicker); });
+    $('timeCancel')?.addEventListener('click', () => closeModal(timePicker));
+    $('timeConfirm')?.addEventListener('click', () => {
+      const ampm = $('ampmCol').dataset.value || '오전';
+      const hh12 = $('tempHour').value || '07';
+      const mm   = $('tempMin').value  || '00';
+      let h = parseInt(hh12,10);
+      if(ampm==='오전'){ if(h===12) h=0; } else { if(h<12) h+=12; }
+      setTimeDisplay(`${pad(h)}:${mm}`); closeModal(timePicker);
+    });
+    $('pickerBackdrop')?.addEventListener('click', () => { closeModal(datePicker); closeModal(timePicker); });
+
+    // 커스텀 컴포넌트 초기화
+    document.querySelectorAll('.cselect').forEach(initCustomSelect);
+    document.querySelectorAll('.seg[data-for]').forEach(initSegment);
+
+    // 다음 버튼
+    $('btnNext')?.addEventListener('click', () => {
+      if(!$('deceasedName').value.trim()){ setMsg('고인 성함을 입력하세요.', 'red'); return; }
+      if(!$('relationship').value){ setMsg('고인과의 관계를 선택하세요.', 'red'); return; }
+      if(!$('chiefMourner').value.trim()){ setMsg('상주 성함을 입력하세요.', 'red'); return; }
+      if(!$('funeralHall').value.trim()){ setMsg('장례식장을 입력하세요.', 'red'); return; }
+      if(!$('funeralAddr').value.trim()){ setMsg('주소를 입력하세요.', 'red'); return; }
+      if(!$('funeralDate').value){ $('funeralDateDisplay').setAttribute('aria-invalid','true'); setMsg('발인 날짜를 선택하세요.', 'red'); return; }
+      if(!$('funeralTime').value){ $('funeralTimeDisplay').setAttribute('aria-invalid','true'); setMsg('발인 시간을 선택하세요.', 'red'); return; }
+      if(!$('wreathInput').value){ setMsg('근조화환 수령 여부를 선택하세요.', 'red'); return; }
+      saveFuneralInfo();
+      location.href = './executive_detail.html';
+    });
   });
 })();
 </script>

@@ -216,8 +216,8 @@ async function fetchJson(url){
 let PHASE1 = null;
 try { PHASE1 = JSON.parse(localStorage.getItem('executive:phase1') || 'null'); } catch(_){}
 
-if(!PHASE1 || !PHASE1.name){
-  alert('기본 정보가 없어 이전 페이지로 이동합니다.');
+if(!PHASE1 || !PHASE1.deceasedName){
+  alert('부고 정보가 없어 이전 페이지로 이동합니다.');
   location.replace('./executive.html');
 }
 
@@ -386,37 +386,48 @@ function validate(){
 function buildSubject(){
   const prefix = state.status === '퇴임' ? '전)삼성전자' : '삼성전자';
   const title  = state.title ? ` ${state.title}` : '';
-  return `[임원 조사] ${prefix}${title} ${PHASE1.name} 안내`;
+  return `[부고] ${prefix}${title} ${state.chiefMourner || PHASE1.chiefMourner} ${PHASE1.relationship} 안내`;
 }
 
 function buildBody(){
   const prefix = state.status === '퇴임' ? '전)삼성전자' : '삼성전자';
   const lines  = [];
 
-  lines.push(`성명     : ${PHASE1.name}`);
-  lines.push(`연락처   : ${PHASE1.phone}`);
+  // 부고 정보
+  lines.push(`□ 고인 성함   : ${PHASE1.deceasedName}`);
+  lines.push(`□ 고인과의 관계: ${PHASE1.relationship}`);
+  lines.push(`□ 상 주       : ${PHASE1.chiefMourner}`);
+  lines.push('');
+  lines.push(`□ 빈 소       : ${PHASE1.funeralHall}`);
+  lines.push(`              ${PHASE1.funeralAddr}`);
+  const dateStr = (PHASE1.funeralDate || '').replaceAll('-','.');
+  const timeStr = PHASE1.funeralTime || '';
+  lines.push(`□ 발인 일시   : ${dateStr} ${timeStr}`);
+  if(PHASE1.burialSite) lines.push(`□ 장 지       : ${PHASE1.burialSite}`);
+  lines.push(`□ 근조화환    : ${PHASE1.wreath || ''}`);
   lines.push('');
 
+  // 임원 정보
   if(state.status === '재직'){
-    lines.push(`소속     : ${prefix} ${state.dept}`);
-    lines.push(`직급     : ${state.title}`);
+    lines.push(`□ 소 속       : ${prefix} ${state.dept}`);
+    lines.push(`□ 직 급       : ${state.title}`);
   } else {
-    lines.push(`소속     : ${prefix} (퇴임)`);
-    if(state.dept)   lines.push(`전 소속  : ${state.dept} / ${state.title}`);
-    if(state.curOrg) lines.push(`현직장   : ${state.curOrg}`);
+    lines.push(`□ 소 속       : ${prefix} (퇴임)`);
+    if(state.dept)   lines.push(`□ 전 소속     : ${state.dept} / ${state.title}`);
+    if(state.curOrg) lines.push(`□ 현 직장     : ${state.curOrg}`);
   }
   lines.push('');
 
-  lines.push(`청탁금지법 : ${state.act}`);
+  lines.push(`□ 청탁금지법  : ${state.act}`);
   if(state.act === '대상'){
-    lines.push(`  - 대상자 : ${state.who}`);
+    lines.push(`  - 대상자    : ${state.who}`);
     if(state.who === '배우자' && state.spouseCombined)
       lines.push(`  - 배우자 직장/직책 : ${state.spouseCombined}`);
   }
   lines.push('');
 
-  lines.push(`계좌     : ${state.bank} ${state.account} (${PHASE1.name})`);
-  lines.push(`계좌공개 : ${state.open}`);
+  lines.push(`□ 계 좌       : ${state.bank} ${state.account} (${PHASE1.chiefMourner})`);
+  lines.push(`□ 계좌공개    : ${state.open}`);
 
   return lines.join('\n');
 }
