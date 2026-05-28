@@ -175,10 +175,8 @@
   <div class="toast" id="toast"></div>
 
 <script>
-/* ================== 설정 ================== */
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbwsBf2tcQ_17Fpu_yDcEcn4uQDnZ0T8bU5L9KJtkgCCvXOsn5IfKEwVTP5_o7-fQmbvww/exec";
 
-/* ================== 공통 유틸 ================== */
 const el    = (id) => document.getElementById(id);
 const show  = (x)  => x.classList.remove('hidden');
 const hide  = (x)  => x.classList.add('hidden');
@@ -212,7 +210,6 @@ async function fetchJson(url){
   }catch(_){ return jsonpFallback(url); }
 }
 
-/* ================== Phase1 데이터 로드 ================== */
 let PHASE1 = null;
 try { PHASE1 = JSON.parse(localStorage.getItem('executive:phase1') || 'null'); } catch(_){}
 
@@ -221,7 +218,6 @@ if(!PHASE1 || !PHASE1.deceasedName){
   location.replace('./executive.html');
 }
 
-/* ================== 상태 ================== */
 const state = {
   status: '', dept: '', title: '', curOrg: '',
   act: '', who: '', spouseCombined: '',
@@ -229,12 +225,10 @@ const state = {
   signed: false
 };
 
-/* ================== 1단계: 재직여부 ================== */
 function selectStatus(s){
   state.status = s;
   press(el('btn-onjob'),  s === '재직');
   press(el('btn-retire'), s === '퇴임');
-
   show(el('sec-onjob'));
   if(s === '재직'){
     el('lbl-dept').innerHTML  = '근무 부서 <span class="req">*</span>';
@@ -245,35 +239,23 @@ function selectStatus(s){
     el('lbl-title').innerHTML = '전 직급 <span class="muted">(참고)</span>';
     show(el('sec-retire'));
   }
-  show(el('sec-act'));
-  show(el('sec-account'));
-  show(el('sec-open'));
-  show(el('sec-sign'));
-  show(el('sec-preview'));
+  show(el('sec-act')); show(el('sec-account')); show(el('sec-open')); show(el('sec-sign')); show(el('sec-preview'));
   validate();
 }
 el('btn-onjob').addEventListener('click',  () => selectStatus('재직'));
 el('btn-retire').addEventListener('click', () => selectStatus('퇴임'));
 
-/* ================== 2단계: 부서/직급/현직장 ================== */
 ['dept','title','curOrg'].forEach(id => {
   const node = el(id);
   if(node) node.addEventListener('input', e => { state[id] = e.target.value.trim(); validate(); });
 });
 
-/* ================== 3단계: 청탁금지법 ================== */
 function selectAct(v){
   state.act = v;
   press(el('btn-act-no'),  v === '비대상');
   press(el('btn-act-yes'), v === '대상');
-  if(v === '대상'){
-    show(el('act-extra'));
-  } else {
-    hide(el('act-extra'));
-    state.who = ''; state.spouseCombined = '';
-    press(el('btn-who-self'), false); press(el('btn-who-spouse'), false);
-    hide(el('spouse-wrap'));
-  }
+  if(v === '대상'){ show(el('act-extra')); }
+  else { hide(el('act-extra')); state.who = ''; state.spouseCombined = ''; press(el('btn-who-self'), false); press(el('btn-who-spouse'), false); hide(el('spouse-wrap')); }
   validate();
 }
 el('btn-act-no').addEventListener('click',  () => selectAct('비대상'));
@@ -283,15 +265,13 @@ function selectWho(v){
   state.who = v;
   press(el('btn-who-self'),   v === '본인');
   press(el('btn-who-spouse'), v === '배우자');
-  if(v === '배우자'){ show(el('spouse-wrap')); }
-  else { hide(el('spouse-wrap')); state.spouseCombined = ''; }
+  if(v === '배우자'){ show(el('spouse-wrap')); } else { hide(el('spouse-wrap')); state.spouseCombined = ''; }
   validate();
 }
 el('btn-who-self').addEventListener('click',   () => selectWho('본인'));
 el('btn-who-spouse').addEventListener('click', () => selectWho('배우자'));
 el('spouseCombined').addEventListener('input', e => { state.spouseCombined = e.target.value.trim(); validate(); });
 
-/* ================== 4단계: 계좌 ================== */
 const bankSelect = el('bankSelect');
 const bankInput  = el('bankInput');
 
@@ -309,7 +289,6 @@ bankSelect.addEventListener('change', syncBank);
 bankInput.addEventListener('input',  () => { state.bank = bankInput.value.trim(); validate(); });
 el('account').addEventListener('input', e => { state.account = e.target.value; validate(); });
 
-/* ================== 5단계: 계좌 공개 ================== */
 function selectOpen(v){
   state.open = v;
   press(el('btn-open-yes'), v === '희망');
@@ -319,16 +298,13 @@ function selectOpen(v){
 el('btn-open-yes').addEventListener('click', () => selectOpen('희망'));
 el('btn-open-no').addEventListener('click',  () => selectOpen('비희망'));
 
-/* ================== 6단계: 서명 ================== */
 (function initSignature(){
   const canvas = el('signCanvas');
   const ctx    = canvas.getContext('2d');
   let drawing  = false;
   let hasMark  = false;
-
   ctx.strokeStyle = '#111'; ctx.lineWidth = 2.5;
   ctx.lineCap = 'round';   ctx.lineJoin = 'round';
-
   function getPos(e){
     const rect  = canvas.getBoundingClientRect();
     const scaleX = canvas.width  / rect.width;
@@ -336,7 +312,6 @@ el('btn-open-no').addEventListener('click',  () => selectOpen('비희망'));
     const src = e.touches ? e.touches[0] : e;
     return { x: (src.clientX - rect.left) * scaleX, y: (src.clientY - rect.top) * scaleY };
   }
-
   function startDraw(e){ e.preventDefault(); drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }
   function draw(e){
     if(!drawing) return; e.preventDefault();
@@ -346,7 +321,6 @@ el('btn-open-no').addEventListener('click',  () => selectOpen('비희망'));
     if(!drawing) return; drawing = false;
     if(hasMark){ state.signed = true; el('signData').value = canvas.toDataURL('image/png'); validate(); }
   }
-
   canvas.addEventListener('mousedown',  startDraw);
   canvas.addEventListener('mousemove',  draw);
   canvas.addEventListener('mouseup',    endDraw);
@@ -354,7 +328,6 @@ el('btn-open-no').addEventListener('click',  () => selectOpen('비희망'));
   canvas.addEventListener('touchstart', startDraw, { passive: false });
   canvas.addEventListener('touchmove',  draw,      { passive: false });
   canvas.addEventListener('touchend',   endDraw);
-
   el('btnClearSign').addEventListener('click', () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     hasMark = false; state.signed = false; el('signData').value = '';
@@ -362,13 +335,11 @@ el('btn-open-no').addEventListener('click',  () => selectOpen('비희망'));
   });
 })();
 
-/* ================== 검증 ================== */
 function validate(){
   const btnPrev   = el('btn-preview');
   const btnSubmit = el('btn-submit');
   const disable   = () => { btnPrev.classList.add('disabled'); btnPrev.setAttribute('aria-disabled','true'); btnSubmit.setAttribute('disabled',''); };
   const enable    = () => { btnPrev.classList.remove('disabled'); btnPrev.removeAttribute('aria-disabled'); btnSubmit.removeAttribute('disabled'); };
-
   if(!state.status) return disable();
   if(state.status === '재직' && (!state.dept || !state.title)) return disable();
   if(!state.act) return disable();
@@ -378,22 +349,18 @@ function validate(){
   if(!/^[0-9-]{6,}$/.test(state.account)) return disable();
   if(!state.open) return disable();
   if(!state.signed) return disable();
-
   enable();
 }
 
-/* ================== 미리보기/본문 ================== */
 function buildSubject(){
   const prefix = state.status === '퇴임' ? '전)삼성전자' : '삼성전자';
   const title  = state.title ? ` ${state.title}` : '';
-  return `[부고] ${prefix}${title} ${state.chiefMourner || PHASE1.chiefMourner} ${PHASE1.relationship} 안내`;
+  return `[부고] ${prefix}${title} ${PHASE1.chiefMourner} ${PHASE1.relationship} 안내`;
 }
 
 function buildBody(){
   const prefix = state.status === '퇴임' ? '전)삼성전자' : '삼성전자';
   const lines  = [];
-
-  // 부고 정보
   lines.push(`□ 고인 성함   : ${PHASE1.deceasedName}`);
   lines.push(`□ 고인과의 관계: ${PHASE1.relationship}`);
   lines.push(`□ 상 주       : ${PHASE1.chiefMourner}`);
@@ -401,13 +368,10 @@ function buildBody(){
   lines.push(`□ 빈 소       : ${PHASE1.funeralHall}`);
   lines.push(`              ${PHASE1.funeralAddr}`);
   const dateStr = (PHASE1.funeralDate || '').replaceAll('-','.');
-  const timeStr = PHASE1.funeralTime || '';
-  lines.push(`□ 발인 일시   : ${dateStr} ${timeStr}`);
+  lines.push(`□ 발인 일시   : ${dateStr} ${PHASE1.funeralTime || ''}`);
   if(PHASE1.burialSite) lines.push(`□ 장 지       : ${PHASE1.burialSite}`);
   lines.push(`□ 근조화환    : ${PHASE1.wreath || ''}`);
   lines.push('');
-
-  // 임원 정보
   if(state.status === '재직'){
     lines.push(`□ 소 속       : ${prefix} ${state.dept}`);
     lines.push(`□ 직 급       : ${state.title}`);
@@ -417,7 +381,6 @@ function buildBody(){
     if(state.curOrg) lines.push(`□ 현 직장     : ${state.curOrg}`);
   }
   lines.push('');
-
   lines.push(`□ 청탁금지법  : ${state.act}`);
   if(state.act === '대상'){
     lines.push(`  - 대상자    : ${state.who}`);
@@ -425,10 +388,8 @@ function buildBody(){
       lines.push(`  - 배우자 직장/직책 : ${state.spouseCombined}`);
   }
   lines.push('');
-
   lines.push(`□ 계 좌       : ${state.bank} ${state.account} (${PHASE1.chiefMourner})`);
   lines.push(`□ 계좌공개    : ${state.open}`);
-
   return lines.join('\n');
 }
 
@@ -440,7 +401,6 @@ el('btn-preview').addEventListener('click', () => {
 });
 el('dlg-cancel').addEventListener('click', () => el('dlg').close());
 
-/* ================== 제출 ================== */
 async function submit(){
   const url = ENDPOINT
     + `?action=sendNotice`
@@ -465,7 +425,6 @@ el('dlg-ok').addEventListener('click', async () => {
   }
 });
 
-/* ================== 초기화 ================== */
 validate();
 </script>
 </body>
