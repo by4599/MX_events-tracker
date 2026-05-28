@@ -285,7 +285,7 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
   "use strict";
 
   /* ================== 0) 설정 ================== */
-  const ENDPOINT = "https://script.google.com/macros/s/YOUR_EXECUTIVE_GAS_ENDPOINT/exec";
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycbwsBf2tcQ_17Fpu_yDcEcn4uQDnZ0T8bU5L9KJtkgCCvXOsn5IfKEwVTP5_o7-fQmbvww/exec";
 
   /* ================== 1) 동의 확인 ================== */
   if(localStorage.getItem('executive:consent') !== 'true'){
@@ -601,7 +601,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
 
   /* ================== 10) 초기 바인딩 ================== */
   document.addEventListener('DOMContentLoaded', () => {
-    // AI 분석 버튼
     const btnCheck  = $('btnCheck');
     const urlInput  = $('funeralUrl');
     const syncBtn   = () => {
@@ -616,7 +615,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
       requestExtractSmart((urlInput.value||'').trim());
     });
 
-    // 수기 입력 토글
     $('noFuneral')?.addEventListener('change', e => {
       const on = e.target.checked;
       urlInput.disabled = on;
@@ -625,7 +623,6 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
       else { setMsg(''); syncBtn(); }
     });
 
-    // 날짜/시간 피커
     $('funeralDateDisplay')?.addEventListener('click', () => {
       let base = $('funeralDate').value || new Date().toISOString().slice(0,10);
       const [y,m] = base.split('-');
@@ -660,11 +657,9 @@ input:focus, select:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17
     });
     $('pickerBackdrop')?.addEventListener('click', () => { closeModal(datePicker); closeModal(timePicker); });
 
-    // 커스텀 컴포넌트 초기화
     document.querySelectorAll('.cselect').forEach(initCustomSelect);
     document.querySelectorAll('.seg[data-for]').forEach(initSegment);
 
-    // 다음 버튼
     $('btnNext')?.addEventListener('click', () => {
       if(!$('deceasedName').value.trim()){ setMsg('고인 성함을 입력하세요.', 'red'); return; }
       if(!$('relationship').value){ setMsg('고인과의 관계를 선택하세요.', 'red'); return; }
