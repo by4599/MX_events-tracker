@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>임원 기본 정보 입력</title>
+<style>
+/* ================== 기본 레이아웃 ================== */
+body{
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  margin:0; padding:16px; background:#f9f9f9; color:#111;
+}
+.card{
+  max-width:420px; margin:0 auto; background:#fff; padding:16px;
+  border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,.1);
+}
+h2{ margin-top:0; font-size:18px; }
+h3{ margin:0 0 8px 0; font-size:15px; font-weight:700; }
+label{ display:block; margin:8px 0 4px; font-weight:600; font-size:14px; }
+
+/* ================== 폼 컨트롤 공통 ================== */
+input[type="text"], input[type="tel"]{
+  width:100%; padding:10px 12px; font-size:14px;
+  border:1.5px solid #ddd; border-radius:8px; background:#fff;
+  transition:.2s; outline:none; box-sizing:border-box;
+}
+input::placeholder{ color:#aaa; font-size:13px; }
+input:focus{ border-color:#111; box-shadow:0 0 0 3px rgba(17,17,17,.08); }
+
+.row{ display:flex; gap:6px; }
+.col{ flex:1; }
+.btn{ padding:10px 12px; border:0; border-radius:6px; cursor:pointer; font-weight:600; font-size:14px; }
+.btn.primary{ background:#111; color:#fff; width:100%; margin-top:12px; }
+.btn.primary:disabled{ background:#999; cursor:not-allowed; }
+.section{ margin-top:16px; padding-top:12px; border-top:1px solid #eee; }
+.msg{ margin-top:8px; font-size:13px; }
+
+/* ================== 세그먼트 버튼 ================== */
+.seg{ display:flex; gap:6px; }
+.seg__btn{
+  flex:1; padding:10px 12px; border:1.5px solid #ddd; border-radius:6px;
+  background:#fff; font-weight:600; font-size:14px; cursor:pointer;
+}
+.seg__btn[aria-pressed="true"], .seg__btn.is-selected{ background:#111; color:#fff; border-color:#111; }
+
+.hidden{ display:none !important; }
+.hint{ color:#8a8a8a; font-size:12px; margin-top:6px; display:block; }
+.req{ color:#e11; margin-left:2px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>임원 기본 정보 입력</h2>
+
+  <!-- 성명 -->
+  <label for="name">성명 <span class="req">*</span></label>
+  <input id="name" type="text" placeholder="예) 홍길동" />
+
+  <!-- 연락처 -->
+  <label for="phone">연락처 <span class="req">*</span></label>
+  <input id="phone" type="tel" placeholder="010-1234-5678 (하이픈 포함)" />
+
+  <!-- 재직여부 -->
+  <div class="section">
+    <h3>삼성전자 재직여부 <span class="req">*</span></h3>
+    <div class="seg" role="group" aria-label="재직/퇴임 선택">
+      <button type="button" class="seg__btn" id="btn-onjob" data-status="재직" aria-pressed="false">재직</button>
+      <button type="button" class="seg__btn" id="btn-retire" data-status="퇴임" aria-pressed="false">퇴임</button>
+    </div>
+  </div>
+
+  <!-- (재직시) 근무 부서/직급 -->
+  <div class="section hidden" id="sec-onjob">
+    <div class="row">
+      <div class="col">
+        <label for="dept">근무 부서 <span class="req">*</span></label>
+        <input id="dept" type="text" placeholder="예) 스마트폰개발1그룹(MX)" autocomplete="organization" />
+      </div>
+      <div class="col">
+        <label for="title">직급 <span class="req">*</span></label>
+        <input id="title" type="text" placeholder="예) 상무" autocomplete="organization-title" />
+      </div>
+    </div>
+  </div>
+
+  <!-- (퇴임시) 현직장 및 직책 -->
+  <div class="section hidden" id="sec-retire">
+    <label for="curOrg">현직장 및 직책</label>
+    <input id="curOrg" type="text" placeholder="예) OO재단 고문 (없을 경우 공란)" />
+    <small class="hint">※ 퇴임 후 현재 재직 중인 경우에만 입력</small>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <button class="btn primary" id="btnNext" disabled>추가 정보 입력</button>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+
+  function setMsg(text, color="#333"){
+    const el = $('msg');
+    el.textContent = text;
+    el.style.color = color;
+  }
+
+  // 동의 없이 진입 방지
+  if(localStorage.getItem('executive:consent') !== 'true'){
+    alert('개인정보 수집 동의가 필요합니다.');
+    location.replace('./executive_privacy.html');
+  }
+
+  const state = { status: '' };
+
+  function press(btn, on){
+    btn.setAttribute('aria-pressed', String(!!on));
+    btn.classList.toggle('is-selected', !!on);
+  }
+
+  function selectStatus(s){
+    state.status = s;
+    press($('btn-onjob'), s === '재직');
+    press($('btn-retire'), s === '퇴임');
+
+    if(s === '재직'){
+      $('sec-onjob').classList.remove('hidden');
+      $('sec-retire').classList.add('hidden');
+    } else {
+      $('sec-onjob').classList.remove('hidden');
+      $('sec-retire').classList.remove('hidden');
+    }
+    validate();
+  }
+
+  $('btn-onjob').addEventListener('click', () => selectStatus('재직'));
+  $('btn-retire').addEventListener('click', () => selectStatus('퇴임'));
+
+  ['name','phone','dept','title','curOrg'].forEach(id => {
+    const el = $(id);
+    if(el) el.addEventListener('input', validate);
+  });
+
+  function validate(){
+    const btnNext = $('btnNext');
+    const name = ($('name').value || '').trim();
+    const phone = ($('phone').value || '').trim();
+
+    if(!name || !phone || !state.status){ btnNext.disabled = true; return; }
+    if(!/^[0-9-]{9,14}$/.test(phone)){ setMsg('연락처 형식을 확인해 주세요. (예: 010-1234-5678)', '#b45309'); btnNext.disabled = true; return; }
+
+    if(state.status === '재직'){
+      const dept = ($('dept').value || '').trim();
+      const title = ($('title').value || '').trim();
+      if(!dept || !title){ btnNext.disabled = true; setMsg('', '#333'); return; }
+    }
+
+    setMsg('', '#333');
+    btnNext.disabled = false;
+  }
+
+  $('btnNext').addEventListener('click', () => {
+    const phase1 = {
+      name:   ($('name').value || '').trim(),
+      phone:  ($('phone').value || '').trim(),
+      status: state.status,
+      dept:   ($('dept').value || '').trim(),
+      title:  ($('title').value || '').trim(),
+      curOrg: ($('curOrg').value || '').trim()
+    };
+
+    try { localStorage.setItem('executive:phase1', JSON.stringify(phase1)); } catch(_){}
+    location.href = './executive_detail.html';
+  });
+})();
+</script>
+</body>
+</html>
