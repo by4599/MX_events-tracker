@@ -9,6 +9,7 @@ var SHEET_ID    = SCRIPT_PROP.getProperty('SHEET_ID') || '';
 
 /* ── doGet entry point ────────────────────────────────────────── */
 function doGet(e) {
+  e = e || {};
   var p   = e.parameter || {};
   var act = p.action || '';
   var cb  = p.callback || 'cb';
